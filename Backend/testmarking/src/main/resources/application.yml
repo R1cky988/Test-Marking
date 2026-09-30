@@ -1,0 +1,50 @@
+spring:
+  datasource:
+    url: ${POSTGRES_DB:jdbc:postgresql://localhost:5432/omr_db}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+#  mail:
+#    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+#    port: ${SPRING_MAIL_PORT:587}
+#    username: ${SPRING_MAIL_USERNAME:your-email@gmail.com}
+#    password: ${SPRING_MAIL_PASSWORD:your-gmail-app-password}
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
+#            required: true
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET}
+      expiration: 86400000          # 1 day in milliseconds
+      refresh-token:
+        expiration: 604800000      # 7 days in milliseconds
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ROOT_USER}
+  secret-key: ${MINIO_ROOT_PASSWORD}
+  buckets:
+    raw: raw-image
+    marked: marked-image
+    avatar: avatar
