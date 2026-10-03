@@ -52,12 +52,12 @@
           <!-- 2. Class Code (Mã lớp học) -->
           <div class="space-y-1.5">
             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Mã lớp học <span class="text-red-500">*</span>
+              Mã / Tên lớp học <span class="text-red-500">*</span>
             </label>
             <input
               v-model="form.classCode"
               type="text"
-              placeholder="Ví dụ: 138902..."
+              placeholder="Ví dụ: 138902 hoặc 12A1"
               class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition"
             />
           </div>
@@ -65,12 +65,12 @@
           <!-- 3. Subject Code (Mã học phần / môn học) -->
           <div class="space-y-1.5">
             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Mã môn học / học phần <span class="text-red-500">*</span>
+              Mã / Tên môn học <span class="text-slate-400 font-normal">(Kèm khối/lớp nếu có)</span>
             </label>
             <input
               v-model="form.subjectCode"
               type="text"
-              placeholder="Ví dụ: IT4409..."
+              placeholder="VD: IT4409 hoặc Toán 12A1..."
               class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition uppercase"
             />
           </div>
