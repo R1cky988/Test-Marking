@@ -40,10 +40,10 @@ application:
       refresh-token:
         expiration: 604800000      # 7 days in milliseconds
 
-minio:
+storage:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-  access-key: ${MINIO_ROOT_USER}
-  secret-key: ${MINIO_ROOT_PASSWORD}
+  access-key: ${RUSTFS_ACCESS_KEY}
+  secret-key: ${RUSTFS_SECRET_KEY}
   buckets:
     raw: raw-image
     marked: marked-image
