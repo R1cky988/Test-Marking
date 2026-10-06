@@ -37,5 +37,11 @@ public class Student {
     @PrePersist
     public void generateUuid() {
         createdAt = LocalDate.now();
+        if (updatedAt == null) {
+            updatedAt = LocalDate.now();
+        }
+        if (uuid == null) {
+            uuid = UUID.randomUUID();
+        }
     }
 }
