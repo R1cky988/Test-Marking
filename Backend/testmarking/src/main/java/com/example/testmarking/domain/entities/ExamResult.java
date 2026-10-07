@@ -2,8 +2,8 @@ package com.example.testmarking.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -13,16 +13,17 @@ import java.util.UUID;
 })
 @Getter
 @Setter
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ExamResult {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "uuid", nullable = false, unique = true, updatable = false)
     private UUID uuid;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -52,28 +53,49 @@ public class ExamResult {
     @Column(name = "total_questions", nullable = false)
     private Integer totalQuestions;
 
+    // Nguồn tạo bài nộp: 'TEACHER_OFFLINE', 'STUDENT_SCAN', 'ONLINE_FORM'
+    @Column(name = "submission_source", length = 50, nullable = false)
+    private String submissionSource = "TEACHER_OFFLINE";
+
+    // 3 ảnh: Ảnh gốc, Ảnh nắn phẳng (Dewarped), và Ảnh vẽ khoanh tròn (Marked)
     @Column(name = "image_raw_rust_key", length = 500)
     private String imageRawRustKey;
+
+    @Column(name = "image_dewarped_rust_key", length = 500)
+    private String imageDewarpedRustKey;
 
     @Column(name = "image_marked_rust_key", length = 500)
     private String imageMarkedRustKey;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDate createdAt;
+    // Đổi sang OffsetDateTime để lưu chính xác Giờ:Phút:Giây nộp bài
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDate updatedAt;
+    private OffsetDateTime updatedAt;
 
     @PrePersist
-    public void generateUuid() {
-        if (createdAt == null) {
-            createdAt = LocalDate.now();
+    public void prePersist() {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = now;
         }
-        if (updatedAt == null) {
-            updatedAt = LocalDate.now();
+        if (this.updatedAt == null) {
+            this.updatedAt = now;
         }
-        if (uuid == null) {
-            uuid = UUID.randomUUID();
+        if (this.uuid == null) {
+            this.uuid = UUID.randomUUID();
         }
+        if (this.attemptNumber == null) {
+            this.attemptNumber = 1;
+        }
+        if (this.isLatest == null) {
+            this.isLatest = true;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = OffsetDateTime.now();
     }
 }

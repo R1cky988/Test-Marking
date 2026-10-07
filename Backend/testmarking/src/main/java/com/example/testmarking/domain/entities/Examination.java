@@ -4,8 +4,8 @@ import com.example.testmarking.domain.entities.enums.ExamFormat;
 import com.example.testmarking.domain.entities.enums.ExamStatus;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -13,16 +13,17 @@ import java.util.UUID;
 @Table(name = "examinations")
 @Getter
 @Setter
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Examination {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "uuid", nullable = false, unique = true, updatable = false)
     private UUID uuid;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,11 +44,11 @@ public class Examination {
     private String gradeLevel;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "format", nullable = false, length = 30)
     private ExamFormat format = ExamFormat.OFFLINE;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false, length = 30)
     private ExamStatus status = ExamStatus.DRAFT;
 
     @Column(name = "from_time")
@@ -82,22 +83,38 @@ public class Examination {
     @Column(name = "number_of_hard_questions", nullable = false)
     private Integer numberOfHardQuestions = 0;
 
-    @Column(name = "created_at")
-    private LocalDate createdAt;
+    // Cờ kiểm soát công bố điểm (Examxy policy)
+    @Column(name = "is_score_published", nullable = false)
+    private Boolean isScorePublished = false;
 
-    @Column(name = "updated_at")
-    private LocalDate updatedAt;
+    @Column(name = "score_published_at")
+    private OffsetDateTime scorePublishedAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
 
     @PrePersist
-    public void generateUuid() {
-        if (createdAt == null) {
-            createdAt = LocalDate.now();
+    public void prePersist() {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = now;
         }
-        if (updatedAt == null) {
-            updatedAt = LocalDate.now();
+        if (this.updatedAt == null) {
+            this.updatedAt = now;
         }
-        if (uuid == null) {
-            uuid = UUID.randomUUID();
+        if (this.uuid == null) {
+            this.uuid = UUID.randomUUID();
         }
+        if (this.isScorePublished == null) {
+            this.isScorePublished = false;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = OffsetDateTime.now();
     }
 }
