@@ -11,11 +11,12 @@ import java.time.LocalDate;
 
 public interface UserPort {
     AuthResponse login(LoginRequest request);
-    AuthResponse register(RegisterRequest request);
+    void register(RegisterRequest request);
 
     AuthResponse updateProfile(UpdateUserRequest request);
 
     void updatePassword(UpdatePasswordRequest request);
 
     UserResponse getCurrentUserToResponse();
+    AuthResponse verifyEmail(String email, String code);
 }

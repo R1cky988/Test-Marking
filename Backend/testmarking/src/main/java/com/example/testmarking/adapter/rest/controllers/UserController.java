@@ -1,9 +1,6 @@
 package com.example.testmarking.adapter.rest.controllers;
 
-import com.example.testmarking.adapter.rest.dtos.request.LoginRequest;
-import com.example.testmarking.adapter.rest.dtos.request.RegisterRequest;
-import com.example.testmarking.adapter.rest.dtos.request.UpdatePasswordRequest;
-import com.example.testmarking.adapter.rest.dtos.request.UpdateUserRequest;
+import com.example.testmarking.adapter.rest.dtos.request.*;
 import com.example.testmarking.common.ApiResponse;
 import com.example.testmarking.domain.ports.UserPort;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +42,7 @@ public class UserController {
             return ResponseEntity.ok(ApiResponse.builder()
                     .status(1)
                     .message("Register successfully")
-                    .data(userPort.register(request))
+                    .data(null)
                     .build());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
@@ -106,6 +103,23 @@ public class UserController {
                     .data(userPort.getCurrentUserToResponse())
                     .build());
         }catch (Exception e){
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(0)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build());
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestBody VerifyEmailRequest request) {
+        try {
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(1)
+                    .message("Xác thực email thành công")
+                    .data(userPort.verifyEmail(request.getEmail(), request.getCode()))
+                    .build());
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.builder()
                     .status(0)
                     .message(e.getMessage())
