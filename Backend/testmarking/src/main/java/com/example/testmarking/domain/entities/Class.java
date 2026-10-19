@@ -6,10 +6,11 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Table(name = "classes")
+@Table(name = "classes", indexes = {
+        @Index(name = "idx_classes_created_user", columnList = "created_user_id")
+})
 @Getter
 @Setter
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -21,24 +22,35 @@ public class Class {
     @Column(nullable = false, unique = true)
     private UUID uuid;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_user_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_user_id", nullable = false)
     private User createdUser;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
-    @Column(name = "class_code", nullable = true)
+    @Column(name = "class_code")
     private String classCode;
 
     @Column(name = "subject")
     private String subject;
 
-    @Column(name = "class_join_code")
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    /** Key of the cover image in your storage (MinIO). Optional. */
+    @Column(name = "cover_image_key", length = 500)
+    private String coverImageKey;
+
+    @Column(name = "class_join_code", unique = true)
     private String classJoinCode;
 
-    @Column(name = "is_archived")
-    private Boolean isArchived;
+    /** true = a student who enters the join code creates a ClassJoinRequest the teacher must approve (Examxy behaviour). */
+    @Column(name = "require_join_approval", nullable = false)
+    private Boolean requireJoinApproval = true;
+
+    @Column(name = "is_archived", nullable = false)
+    private Boolean isArchived = false;
 
     @Column(name = "created_at")
     private LocalDate createdAt;
@@ -55,5 +67,10 @@ public class Class {
         if (uuid == null) {
             uuid = UUID.randomUUID();
         }
+    }
+
+    @PreUpdate
+    public void touch() {
+        updatedAt = LocalDate.now();
     }
 }

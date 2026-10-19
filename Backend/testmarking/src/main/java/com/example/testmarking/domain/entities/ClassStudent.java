@@ -5,10 +5,15 @@ import lombok.*;
 
 import java.time.OffsetDateTime;
 
-@Table(name = "class_student")
+/**
+ * CHANGED: joinedAt was insertable=false/updatable=false, so with ddl-auto=update (no DB default)
+ * it would always be NULL. It is now set in @PrePersist. Added a unique (class, student) pair.
+ */
+@Table(name = "class_student", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_class_student", columnNames = {"class_id", "student_id"})
+})
 @Getter
 @Setter
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -25,6 +30,13 @@ public class ClassStudent {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @Column(name = "joined_at", insertable = false, updatable = false)
-    private OffsetDateTime joinedAt; // Matches TIMESTAMP WITH TIME ZONE
+    @Column(name = "joined_at", nullable = false, updatable = false)
+    private OffsetDateTime joinedAt;
+
+    @PrePersist
+    public void onCreate() {
+        if (joinedAt == null) {
+            joinedAt = OffsetDateTime.now();
+        }
+    }
 }
