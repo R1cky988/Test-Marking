@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${POSTGRES_DB:jdbc:postgresql://localhost:5432/omr_db}
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:omr_db}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -35,10 +35,15 @@ spring:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET}
-      expiration: 86400000          # 1 day in milliseconds
+      access-token:
+        secret-key: ${JWT_SECRET}
+        expiration: 86400000          # 1 day in milliseconds
       refresh-token:
-        expiration: 604800000      # 7 days in milliseconds
+        secret-key: ${JWT_REFRESH_SECRET}
+        expiration: 604800000       # 7 days
+
+demo:
+  enabled: ${DEMO_ENABLED:false}
 
 storage:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
@@ -48,3 +53,12 @@ storage:
     raw: raw-image
     marked: marked-image
     avatar: avatar
+    class-files: class-files
+
+omr:
+  template:
+    # Reject layouts that are not the 20/40/60 preset rule. false = accept any 2- or 4-zone layout (NestJS behaviour).
+    enforce-distribution: true
+    default-status: PUBLISHED   # NestJS saved PUBLISHED; entity default is DRAFT
+    default-type: STANDARD      # NestJS saved STANDARD; entity default is CUSTOM
+

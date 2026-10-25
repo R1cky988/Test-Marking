@@ -55,7 +55,7 @@ public class User {
     @Column(nullable = false)
     private UserStatus status = UserStatus.PENDING;
 
-    @Column(nullable = false, name = "email_verified_at")
+    @Column(name = "email_verified_at")
     private LocalDate emailVerifiedAt;
 
     @Column(name = "created_at")

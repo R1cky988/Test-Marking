@@ -1,9 +1,7 @@
 package com.example.testmarking.application.imp;
 
 import com.example.testmarking.domain.ports.StoragePort;
-import io.minio.GetObjectArgs;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +39,17 @@ public class StorageImp implements StoragePort {
             );
         } catch (Exception e) {
             throw new RuntimeException("Failed to download file from MinIO/RustFS", e);
+        }
+    }
+
+    @Override
+    public void ensureBucket(String bucketName) {
+        try {
+            if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
+                minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to prepare bucket " + bucketName, e);
         }
     }
 }

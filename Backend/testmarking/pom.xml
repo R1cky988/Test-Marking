@@ -27,7 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>17</java.version>
+		<java.version>23</java.version>
 		<jjwt.version>0.12.5</jjwt.version>
 		<pdfbox.version>3.0.3</pdfbox.version>
 	</properties>
@@ -144,7 +144,11 @@
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
 		</plugins>
 	</build>
 

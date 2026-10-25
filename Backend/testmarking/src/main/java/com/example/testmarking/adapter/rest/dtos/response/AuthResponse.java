@@ -1,13 +1,15 @@
 package com.example.testmarking.adapter.rest.dtos.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuthResponse {
     @JsonProperty("AccessToken")
     private String accessToken;

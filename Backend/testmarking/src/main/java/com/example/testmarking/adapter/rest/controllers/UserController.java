@@ -4,8 +4,11 @@ import com.example.testmarking.adapter.rest.dtos.request.*;
 import com.example.testmarking.common.ApiResponse;
 import com.example.testmarking.domain.ports.UserPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -39,6 +42,7 @@ public class UserController {
             @RequestBody RegisterRequest request
     ){
         try{
+            userPort.register(request);   // was missing: the endpoint answered "success" without creating the user
             return ResponseEntity.ok(ApiResponse.builder()
                     .status(1)
                     .message("Register successfully")
@@ -103,6 +107,43 @@ public class UserController {
                     .data(userPort.getCurrentUserToResponse())
                     .build());
         }catch (Exception e){
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(0)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build());
+        }
+    }
+
+    /** body: { "refreshToken": "..." }. 401 when the token is wrong or expired, so the client logs out. */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
+        try {
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(1)
+                    .message("Refresh successfully")
+                    .data(userPort.refresh(request.get("refreshToken")))
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.builder()
+                    .status(0)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build());
+        }
+    }
+
+    /** body: { "email": "..." }. Sends a new 6-digit code (the old one may have expired or the mail may not have arrived). */
+    @PostMapping("/resend-code")
+    public ResponseEntity<?> resendCode(@RequestBody Map<String, String> request) {
+        try {
+            userPort.resendVerificationCode(request.get("email"));
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(1)
+                    .message("Đã gửi lại mã xác thực")
+                    .data(null)
+                    .build());
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.builder()
                     .status(0)
                     .message(e.getMessage())

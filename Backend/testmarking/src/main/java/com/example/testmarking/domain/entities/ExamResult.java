@@ -8,8 +8,10 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "exam_results", uniqueConstraints = {
-        @UniqueConstraint(name = "unique_student_exam_attempt", columnNames = {"examination_id", "student_id", "attempt_number"})
+@Table(name = "exam_results", indexes = {
+        @Index(name = "idx_exam_result_student", columnList = "student_id"),
+        @Index(name = "idx_exam_result_examination", columnList = "examination_id"),
+        @Index(name = "idx_exam_result_source", columnList = "submission_source")
 })
 @Getter
 @Setter
@@ -34,30 +36,43 @@ public class ExamResult {
     @JoinColumn(name = "student_id")
     private Student student;
 
+    // Người thực hiện tải lên/chấm bài (Giáo viên hoặc chính Sinh viên)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "test_code_id", nullable = false)
+    @JoinColumn(name = "submitted_by_user_id")
+    private User submittedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "test_code_id")
     private TestCode testCode;
 
+    @Builder.Default
     @Column(name = "attempt_number", nullable = false)
     private Integer attemptNumber = 1;
 
+    @Builder.Default
     @Column(name = "is_latest", nullable = false)
     private Boolean isLatest = true;
 
-    @Column(name = "total_score", precision = 4, scale = 2, nullable = false)
+    @Column(name = "total_score", precision = 4, scale = 2)
     private BigDecimal totalScore;
 
-    @Column(name = "total_correct", nullable = false)
+    @Column(name = "total_correct")
     private Integer totalCorrect;
 
-    @Column(name = "total_questions", nullable = false)
+    @Column(name = "total_questions")
     private Integer totalQuestions;
 
     // Nguồn tạo bài nộp: 'TEACHER_OFFLINE', 'STUDENT_SCAN', 'ONLINE_FORM'
+    @Builder.Default
     @Column(name = "submission_source", length = 50, nullable = false)
     private String submissionSource = "TEACHER_OFFLINE";
 
-    // 3 ảnh: Ảnh gốc, Ảnh nắn phẳng (Dewarped), và Ảnh vẽ khoanh tròn (Marked)
+    // Trạng thái nhận diện: 'SUCCESS', 'UNIDENTIFIED_STUDENT', 'OMR_ERROR', 'NEEDS_REVIEW'
+    @Builder.Default
+    @Column(name = "processing_status", length = 50, nullable = false)
+    private String processingStatus = "SUCCESS";
+
+    // Storage references for MinIO / S3
     @Column(name = "image_raw_rust_key", length = 500)
     private String imageRawRustKey;
 
@@ -67,7 +82,6 @@ public class ExamResult {
     @Column(name = "image_marked_rust_key", length = 500)
     private String imageMarkedRustKey;
 
-    // Đổi sang OffsetDateTime để lưu chính xác Giờ:Phút:Giây nộp bài
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

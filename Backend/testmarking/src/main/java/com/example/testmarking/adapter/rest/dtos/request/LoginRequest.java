@@ -6,7 +6,6 @@ import lombok.*;
 @Data
 @Setter
 @RequiredArgsConstructor
-@NoArgsConstructor
 public class LoginRequest {
     private String email;
     private String password;

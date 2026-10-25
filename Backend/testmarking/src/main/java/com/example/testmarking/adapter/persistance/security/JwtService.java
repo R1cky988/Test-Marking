@@ -34,16 +34,16 @@ public class JwtService implements TokenProviderPort {
     public String generateAccessToken(User user) {
         Map<String, Object> extraClaims = new HashMap<>();
         // Embed user role into access token claims for RBAC
-        if (user.role() != null) {
-            extraClaims.put("role", user.role().name());
+        if (user.getRole() != null) {
+            extraClaims.put("role", user.getRole().name());
         }
-        return buildToken(extraClaims, user.email(), accessTokenExpiration, getAccessTokenKey());
+        return buildToken(extraClaims, user.getEmail(), accessTokenExpiration, getAccessTokenKey());
     }
 
     @Override
     public String generateRefreshToken(User user) {
         // Refresh token only needs the subject identity
-        return buildToken(new HashMap<>(), user.email(), refreshTokenExpiration, getRefreshTokenKey());
+        return buildToken(new HashMap<>(), user.getEmail(), refreshTokenExpiration, getRefreshTokenKey());
     }
 
     @Override

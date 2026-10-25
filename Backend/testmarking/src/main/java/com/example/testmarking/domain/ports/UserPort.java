@@ -19,4 +19,7 @@ public interface UserPort {
 
     UserResponse getCurrentUserToResponse();
     AuthResponse verifyEmail(String email, String code);
+    void resendVerificationCode(String email);
+
+    AuthResponse refresh(String refreshToken);
 }

@@ -10,13 +10,6 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * CHANGED: the unique constraint (class_id, student_id, status) is removed. It allowed only ONE rejected
- * (or approved/canceled) row per student per class, so a student rejected twice would crash with a
- * duplicate-key error. "Only one PENDING request" is checked in the service instead:
- *   if (repo.existsByClazzAndStudentAndStatus(cls, student, PENDING)) -> 409.
- * (A Postgres partial unique index on status='PENDING' also works, but Hibernate can't declare it.)
- */
 @Entity
 @Table(name = "class_join_requests", indexes = {
         @Index(name = "idx_join_request_class_status", columnList = "class_id, status"),

@@ -1,14 +1,13 @@
 package com.example.testmarking.adapter.rest.dtos.request;
 
 import com.example.testmarking.domain.entities.enums.Role;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class RegisterRequest {
     private String email;

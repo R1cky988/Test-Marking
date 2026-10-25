@@ -1,6 +1,7 @@
 package com.example.testmarking.adapter.persistance.adapters;
 
 import com.example.testmarking.adapter.persistance.repository.UserRepository;
+import com.example.testmarking.adapter.persistance.repository.VerificationCodeRepository;
 import com.example.testmarking.adapter.persistance.security.JwtService;
 import com.example.testmarking.adapter.rest.dtos.request.LoginRequest;
 import com.example.testmarking.adapter.rest.dtos.request.RegisterRequest;
@@ -9,7 +10,9 @@ import com.example.testmarking.adapter.rest.dtos.request.UpdateUserRequest;
 import com.example.testmarking.adapter.rest.dtos.response.AuthResponse;
 import com.example.testmarking.adapter.rest.dtos.response.UserResponse;
 import com.example.testmarking.domain.entities.User;
+import com.example.testmarking.domain.entities.VerificationCode;
 import com.example.testmarking.domain.entities.enums.Role;
+import com.example.testmarking.domain.entities.enums.UserStatus;
 import com.example.testmarking.domain.ports.UserPort;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,6 +34,8 @@ public class AuthAdapter implements UserPort {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final VerificationCodeRepository verificationCodeRepository;
+    private final EmailAdapter emailService;
     private final JwtService jwtService;
 
     @Override
@@ -57,7 +63,7 @@ public class AuthAdapter implements UserPort {
     }
 
     @Override
-    public AuthResponse register(RegisterRequest request) {
+    public void register(RegisterRequest request) {
         String email = request.getEmail();
         if(userRepository.existsByEmail(email)){
             throw new RuntimeException("Email đã được sử dụng");
@@ -68,14 +74,22 @@ public class AuthAdapter implements UserPort {
 
         String password = request.getPassword();
 
-        Role userRole = request.getRole();
+        if (request.getFirstName() == null || request.getFirstName().isBlank()
+                || request.getLastName() == null || request.getLastName().isBlank()) {
+            throw new RuntimeException("Họ và tên không được để trống");
+        }
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("Mật khẩu phải có ít nhất 8 ký tự");
+        }
+        // only TEACHER or STUDENT can be chosen at sign-up; anything else becomes STUDENT
+        Role userRole = request.getRole() == Role.TEACHER ? Role.TEACHER : Role.STUDENT;
 
         String BASE_AVATAR = "base_avatar";
         User user = User.builder()
                 .uuid(UUID.randomUUID())
                 .email(request.getEmail())
                 .phoneNumber(request.getPhoneNumber())
-                .password(password)
+                .password(passwordEncoder.encode(password))   // was stored as plain text, so BCrypt login could never match
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .dob(request.getDob())
@@ -85,14 +99,33 @@ public class AuthAdapter implements UserPort {
                 .build();
 
         userRepository.save(user);
+        sendVerificationCode(user);
+    }
 
-        var accessToken = jwtService.generateAccessToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
+    private void sendVerificationCode(User user) {
+        String code = String.valueOf((int) ((Math.random() * 900000) + 100000));
 
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
+        VerificationCode verificationCode = VerificationCode.builder()
+                .code(code)
+                .user(user)
+                .expiryDate(LocalDateTime.now().plusMinutes(5))
                 .build();
+
+        verificationCodeRepository.save(verificationCode);
+        emailService.sendVerificationEmail(user.getEmail(), code);
+    }
+
+    @Override
+    public void resendVerificationCode(String email) {
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Thiếu email");
+        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+        if (user.getEmailVerifiedAt() != null) {
+            throw new RuntimeException("Email đã được xác thực");
+        }
+        sendVerificationCode(user);
     }
 
     @Override
@@ -129,6 +162,27 @@ public class AuthAdapter implements UserPort {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    @Override
+    public AuthResponse refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new RuntimeException("Thiếu refresh token");
+        }
+        try {
+            String email = jwtService.extractUsernameFromRefreshToken(refreshToken);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+            if (!jwtService.isRefreshTokenValid(refreshToken, user.getEmail())) {
+                throw new RuntimeException("Refresh token không hợp lệ");
+            }
+            return AuthResponse.builder()
+                    .accessToken(jwtService.generateAccessToken(user))
+                    .refreshToken(jwtService.generateRefreshToken(user))
+                    .build();
+        } catch (io.jsonwebtoken.JwtException e) {
+            throw new RuntimeException("Refresh token không hợp lệ hoặc đã hết hạn");
+        }
     }
 
     @Override
@@ -169,5 +223,33 @@ public class AuthAdapter implements UserPort {
 
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse verifyEmail(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+
+        VerificationCode verificationCode = verificationCodeRepository.findByCodeAndUser(code, user)
+                .orElseThrow(() -> new RuntimeException("Mã xác thực không đúng"));
+
+        if (verificationCode.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Mã xác thực đã hết hạn");
+        }
+
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerifiedAt(LocalDate.now());
+        userRepository.save(user);
+
+        verificationCodeRepository.delete(verificationCode);
+
+        var accessToken = jwtService.generateAccessToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 }

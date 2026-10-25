@@ -39,19 +39,20 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/user/register", "/api/v1/user/login", "/api/v1/admin/login").permitAll()
-                        .requestMatchers("/api/v1/products/**", "/api/v1/category/**", "/api/v1/news/**").permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/addStaff").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/users/update/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/users/delete/**").hasRole("ADMIN")
-
-                        // 2. Shared ADMIN & STAFF endpoints (Dashboard, Product & Order management, User details)
-                        .requestMatchers("/api/v1/admin/users/getRole").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers("/api/v1/admin/users/{uuid}").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers("/api/v1/admin/products/**").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers("/api/v1/admin/orders/**").hasAnyRole("ADMIN", "STAFF")
-                        .anyRequest().authenticated()
+                                .anyRequest().permitAll()
+//                        .requestMatchers("/api/v1/user/register", "/api/v1/user/login", "/api/v1/admin/login").permitAll()
+//                        .requestMatchers("/api/v1/products/**", "/api/v1/category/**", "/api/v1/news/**").permitAll()
+//                        .requestMatchers("/uploads/**").permitAll()
+//                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/users/addStaff").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/users/update/**").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/users/delete/**").hasRole("ADMIN")
+//
+//                        // 2. Shared ADMIN & STAFF endpoints (Dashboard, Product & Order management, User details)
+//                        .requestMatchers("/api/v1/admin/users/getRole").hasAnyRole("ADMIN", "STAFF")
+//                        .requestMatchers("/api/v1/admin/users/{uuid}").hasAnyRole("ADMIN", "STAFF")
+//                        .requestMatchers("/api/v1/admin/products/**").hasAnyRole("ADMIN", "STAFF")
+//                        .requestMatchers("/api/v1/admin/orders/**").hasAnyRole("ADMIN", "STAFF")
+//                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -71,8 +72,8 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
+    @Bean("bcryptPasswordEncoder")
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
