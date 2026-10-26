@@ -1,6 +1,9 @@
 package com.example.testmarking.adapter.rest.controllers;
 
 import com.example.testmarking.adapter.persistance.security.SecurityUser;
+import com.example.testmarking.adapter.rest.dtos.request.ReactionRequest;
+import com.example.testmarking.adapter.rest.dtos.response.ReactionSummaryResponse;
+import com.example.testmarking.adapter.rest.dtos.response.ReactorResponse;
 import com.example.testmarking.application.imp.ClassReactionImp;
 import com.example.testmarking.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -9,13 +12,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-/** Reactions on class posts/comments and "who reacted". Teacher of the class or enrolled student only (checked in the service). */
+/** Reactions on class posts/comments and "who reacted". Members of the class only (teacher or student of THAT class, checked in the service). */
 @RestController
-@RequestMapping("/api/v1/web/classes/{classId}")
-@PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
+@RequestMapping("/api/v1/classes/{classId}")
+@PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ClassReactionController {
 
@@ -27,26 +29,32 @@ public class ClassReactionController {
 
     /** Body {"reaction_type":"LIKE"} sets or changes, {"reaction_type":null} removes. */
     @PutMapping("/posts/{postId}/reaction")
-    public ApiResponse<Map<String, Object>> reactToPost(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                        @PathVariable UUID postId, @RequestBody Map<String, Object> body) {
+    public ApiResponse<ReactionSummaryResponse> reactToPost(@AuthenticationPrincipal SecurityUser me,
+                                                            @PathVariable("classId") UUID classId,
+                                                            @PathVariable("postId") UUID postId,
+                                                            @RequestBody ReactionRequest body) {
         return ok(service.setPostReaction(me.getUser(), classId, postId, body));
     }
 
     @GetMapping("/posts/{postId}/reactions")
-    public ApiResponse<List<Map<String, Object>>> postReactors(@AuthenticationPrincipal SecurityUser me,
-                                                               @PathVariable UUID classId, @PathVariable UUID postId) {
+    public ApiResponse<List<ReactorResponse>> postReactors(@AuthenticationPrincipal SecurityUser me,
+                                                           @PathVariable("classId") UUID classId,
+                                                           @PathVariable("postId") UUID postId) {
         return ok(service.postReactors(me.getUser(), classId, postId));
     }
 
     @PutMapping("/comments/{commentId}/reaction")
-    public ApiResponse<Map<String, Object>> reactToComment(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                           @PathVariable UUID commentId, @RequestBody Map<String, Object> body) {
+    public ApiResponse<ReactionSummaryResponse> reactToComment(@AuthenticationPrincipal SecurityUser me,
+                                                               @PathVariable("classId") UUID classId,
+                                                               @PathVariable("commentId") UUID commentId,
+                                                               @RequestBody ReactionRequest body) {
         return ok(service.setCommentReaction(me.getUser(), classId, commentId, body));
     }
 
     @GetMapping("/comments/{commentId}/reactions")
-    public ApiResponse<List<Map<String, Object>>> commentReactors(@AuthenticationPrincipal SecurityUser me,
-                                                                  @PathVariable UUID classId, @PathVariable UUID commentId) {
+    public ApiResponse<List<ReactorResponse>> commentReactors(@AuthenticationPrincipal SecurityUser me,
+                                                              @PathVariable("classId") UUID classId,
+                                                              @PathVariable("commentId") UUID commentId) {
         return ok(service.commentReactors(me.getUser(), classId, commentId));
     }
 }

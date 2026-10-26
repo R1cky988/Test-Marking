@@ -2,6 +2,7 @@ package com.example.testmarking.application.imp;
 
 import com.example.testmarking.adapter.persistance.repository.ClassDocumentRepository;
 import com.example.testmarking.adapter.persistance.repository.ClassPostRepository;
+import com.example.testmarking.adapter.rest.dtos.response.DocumentResponse;
 import com.example.testmarking.application.imp.ClassAccessImp.Access;
 import com.example.testmarking.domain.entities.ClassDocument;
 import com.example.testmarking.domain.entities.ClassPost;
@@ -20,7 +21,8 @@ import java.util.*;
 
 /**
  * Shared files of a class. A document with post == null shows only in the Files tab; one with a post is an attachment of
- * that post (and also listed in the Files tab). Only the teacher of the class uploads; members download.
+ * that post (and also listed in the Files tab). Every member of the class (its teacher or a student) uploads
+ * and downloads; the teacher of the class and the uploader can delete a file. A student attaches files only to his own posts.
  * Storage keys are generated (never the user's file name), downloads always go through this service.
  */
 @Service
@@ -58,9 +60,9 @@ public class ClassDocumentImp {
     // ─── list ────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> list(User me, UUID classId) {
+    public List<DocumentResponse> list(User me, UUID classId) {
         Access a = access.requireMember(me, classId);
-        List<Map<String, Object>> out = new ArrayList<>();
+        List<DocumentResponse> out = new ArrayList<>();
         for (ClassDocument d : documents.findByClass(a.cls().getId())) {
             if (d.getPost() != null && d.getPost().getStatus() == ClassPostStatus.DRAFT && !a.owner()) continue;
             out.add(item(d, a.owner() || d.getUploadedByUser().getId().equals(me.getId())));
@@ -72,8 +74,8 @@ public class ClassDocumentImp {
 
     /** postId = null for the Files tab, or the uuid of a post to attach the file to it. */
     @Transactional
-    public Map<String, Object> upload(User me, UUID classId, UUID postId, String title, String description, FileData file) {
-        Access a = access.requireOwner(me, classId);
+    public DocumentResponse upload(User me, UUID classId, UUID postId, String title, String description, FileData file) {
+        Access a = access.requireMember(me, classId);
         if (file == null || file.stream() == null || file.size() <= 0) {
             throw TemplateException.badRequest("Chưa chọn tệp", "file: is required");
         }
@@ -91,6 +93,9 @@ public class ClassDocumentImp {
             post = posts.findByUuid(postId)
                     .filter(p -> p.getDeletedAt() == null && p.getClassEntity().getId().equals(a.cls().getId()))
                     .orElseThrow(() -> TemplateException.notFound("POST_NOT_FOUND", "Bài đăng không tồn tại"));
+            if (!a.owner() && !post.getAuthor().getId().equals(me.getId())) {
+                throw TemplateException.forbidden("Bạn chỉ có thể đính kèm tệp vào bài đăng của mình");
+            }
         }
         String cleanTitle = title == null || title.isBlank() ? fileName : title.trim();
         if (cleanTitle.length() > 255) {
@@ -159,20 +164,19 @@ public class ClassDocumentImp {
         }
     }
 
-    /** Document as JSON. canDelete = teacher or uploader. */
-    static Map<String, Object> item(ClassDocument d, boolean canDelete) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", d.getUuid());
-        m.put("title", d.getTitle());
-        m.put("description", d.getDescription());
-        m.put("file_name", d.getFileName());
-        m.put("file_type", d.getFileType());
-        m.put("file_size", d.getFileSize());
-        m.put("post_id", d.getPost() == null ? null : d.getPost().getUuid());
-        m.put("uploaded_by", ClassJson.person(d.getUploadedByUser()));
-        m.put("created_at", ClassJson.at(d.getCreatedAt()));
-        m.put("can_delete", canDelete);
-        return m;
+    /** Document as JSON. canDelete = teacher of the class or uploader. */
+    static DocumentResponse item(ClassDocument d, boolean canDelete) {
+        return new DocumentResponse(
+                d.getUuid(),
+                d.getTitle(),
+                d.getDescription(),
+                d.getFileName(),
+                d.getFileType(),
+                d.getFileSize(),
+                d.getPost() == null ? null : d.getPost().getUuid(),
+                ClassJson.person(d.getUploadedByUser()),
+                ClassJson.at(d.getCreatedAt()),
+                canDelete);
     }
 
     static String cleanName(String raw) {

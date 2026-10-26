@@ -1,6 +1,9 @@
 package com.example.testmarking.application.imp;
 
 import com.example.testmarking.adapter.persistance.repository.*;
+import com.example.testmarking.adapter.rest.dtos.request.JoinClassRequest;
+import com.example.testmarking.adapter.rest.dtos.request.RejectJoinRequest;
+import com.example.testmarking.adapter.rest.dtos.response.*;
 import com.example.testmarking.application.imp.ClassAccessImp.Access;
 import com.example.testmarking.domain.entities.Class;
 import com.example.testmarking.domain.entities.*;
@@ -20,7 +23,8 @@ import java.util.stream.Collectors;
 /**
  * Everything the class detail page needs besides the stream and the files:
  * class info + join code, members, join requests (student asks, teacher approves/rejects), exams by status.
- * Entities in, Maps (snake_case) out.
+ * Entities in, DTOs (adapter/rest/dtos, snake_case JSON) out. What the caller may do is decided by his role IN THIS
+ * CLASS (teacher = created it, student = joined it), never by a global role.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class ClassDetailImp {
     private final ClassRepository classes;
     private final ClassStudentRepository members;
     private final StudentRepository students;
+    private final StudentProfileImp studentProfiles;
     private final ClassJoinRequestRepository requests;
     private final ExaminationRepository exams;
 
@@ -40,38 +45,37 @@ public class ClassDetailImp {
     // ─── class info ──────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public Map<String, Object> detail(User me, UUID classId) {
-        return detailMap(access.requireMember(me, classId));
+    public ClassDetailResponse detail(User me, UUID classId) {
+        return detailOf(access.requireMember(me, classId));
     }
 
-    private Map<String, Object> detailMap(Access a) {
+    private ClassDetailResponse detailOf(Access a) {
         Class c = a.cls();
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", c.getUuid());
-        m.put("class_name", c.getName());
-        m.put("class_code", c.getClassCode());
-        m.put("subject", c.getSubject());
-        m.put("description", c.getDescription());
-        m.put("status", Boolean.TRUE.equals(c.getIsArchived()) ? "archived" : "active");
-        m.put("student_count", members.countByClassEntity_Id(c.getId()));
-        m.put("my_role", a.owner() ? "TEACHER" : "STUDENT");
-        m.put("is_teacher", a.owner());
-        m.put("teacher", ClassJson.person(c.getCreatedUser()));
-        if (a.owner()) {   // students must not see the code that lets others in
-            m.put("join_code", c.getClassJoinCode());
-            m.put("require_join_approval", Boolean.TRUE.equals(c.getRequireJoinApproval()));
-            m.put("pending_request_count", requests.countByClazz_IdAndStatus(c.getId(), RequestStatus.PENDING));
-        }
-        return m;
+        boolean teacher = a.owner();   // students must not see the code that lets others in
+        return new ClassDetailResponse(
+                c.getUuid(),
+                c.getName(),
+                c.getClassCode(),
+                c.getSubject(),
+                c.getDescription(),
+                Boolean.TRUE.equals(c.getRequireJoinApproval()) ? "manual_approve" : "auto_approve",
+                Boolean.TRUE.equals(c.getIsArchived()) ? "archived" : "active",
+                members.countByClassEntity_Id(c.getId()),
+                a.role(),
+                teacher,
+                ClassJson.person(c.getCreatedUser()),
+                teacher ? c.getClassJoinCode() : null,
+                teacher ? Boolean.TRUE.equals(c.getRequireJoinApproval()) : null,
+                teacher ? requests.countByClazz_IdAndStatus(c.getId(), RequestStatus.PENDING) : null);
     }
 
-    /** New random join code; the old one stops working. */
+    /** New random join code; the old one stops working. Teacher of the class only. */
     @Transactional
-    public Map<String, Object> regenerateJoinCode(User me, UUID classId) {
+    public ClassDetailResponse regenerateJoinCode(User me, UUID classId) {
         Access a = access.requireOwner(me, classId);
         a.cls().setClassJoinCode(newJoinCode());
         classes.save(a.cls());
-        return detailMap(a);
+        return detailOf(a);
     }
 
     private String newJoinCode() {
@@ -86,30 +90,25 @@ public class ClassDetailImp {
     // ─── members ─────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public Map<String, Object> members(User me, UUID classId) {
+    public ClassMembersResponse members(User me, UUID classId) {
         Access a = access.requireMember(me, classId);
         User teacher = a.cls().getCreatedUser();
-        Map<String, Object> t = new LinkedHashMap<>(ClassJson.person(teacher));
-        t.put("role", "TEACHER");
-        if (a.owner()) t.put("email", teacher.getEmail());
+        PersonResponse t = ClassJson.person(teacher);
+        MemberTeacherResponse teacherRow = new MemberTeacherResponse(t.id(), t.name(), t.avatarUrl(),
+                ClassAccessImp.TEACHER, a.owner() ? teacher.getEmail() : null);
 
-        List<Map<String, Object>> list = new ArrayList<>();
+        List<MemberStudentResponse> list = new ArrayList<>();
         for (ClassStudent cs : members.findRoster(a.cls().getId())) {
             Student s = cs.getStudent();
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", s.getUuid());
-            m.put("name", ClassJson.displayName(s.getUser()));
-            m.put("avatar_url", s.getUser().getAvatarUrl());
-            m.put("student_code", s.getStudentCode());
-            m.put("joined_at", cs.getJoinedAt());
-            if (a.owner()) m.put("email", s.getUser().getEmail());   // contact details are for the teacher only
-            list.add(m);
+            list.add(new MemberStudentResponse(
+                    s.getUuid(),
+                    ClassJson.displayName(s.getUser()),
+                    s.getUser().getAvatarUrl(),
+                    s.getStudentCode(),
+                    cs.getJoinedAt(),
+                    a.owner() ? s.getUser().getEmail() : null));   // contact details are for the teacher only
         }
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("teachers", List.of(t));
-        out.put("students", list);
-        out.put("student_count", list.size());
-        return out;
+        return new ClassMembersResponse(List.of(teacherRow), list, list.size());
     }
 
     /** Teacher removes a student from the class. The student can ask to join again. */
@@ -123,14 +122,14 @@ public class ClassDetailImp {
 
     // ─── join requests ───────────────────────────────────────────
 
-    /** Student enters a join code. Returns JOINED (class has no approval) or PENDING (teacher must approve). */
+    /** Any user (who is not the teacher of that class) enters a join code and becomes a STUDENT of it. Returns JOINED or PENDING (teacher must approve). */
     @Transactional
-    public Map<String, Object> joinByCode(User me, Map<String, Object> body) {
-        String code = body != null && body.get("join_code") instanceof String s ? s.trim().toUpperCase() : "";
+    public JoinClassResponse joinByCode(User me, JoinClassRequest body) {
+        String code = body != null && body.joinCode() != null ? body.joinCode().trim().toUpperCase() : "";
         if (code.isEmpty()) {
             throw TemplateException.badRequest("Thiếu mã tham gia lớp", "join_code: must not be blank");
         }
-        String message = body.get("message") instanceof String s && !s.isBlank() ? s.trim() : null;
+        String message = body.message() != null && !body.message().isBlank() ? body.message().trim() : null;
         if (message != null && message.length() > 500) {
             throw TemplateException.badRequest("Dữ liệu không hợp lệ", "message: max 500 characters");
         }
@@ -148,25 +147,18 @@ public class ClassDetailImp {
         if (requests.existsByClazz_IdAndStudent_IdAndStatus(cls.getId(), me.getId(), RequestStatus.PENDING)) {
             throw TemplateException.badRequestWithCode("REQUEST_PENDING", "Bạn đã gửi yêu cầu, vui lòng chờ giáo viên duyệt");
         }
-        Student profile = students.findByUser_Id(me.getId())
-                .orElseThrow(() -> TemplateException.badRequestWithCode("STUDENT_PROFILE_MISSING", "Tài khoản chưa có hồ sơ học sinh"));
 
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("class_id", cls.getUuid());
-        out.put("class_name", cls.getName());
         if (Boolean.FALSE.equals(cls.getRequireJoinApproval())) {
-            enroll(cls, profile);
-            out.put("status", "JOINED");
-        } else {
-            requests.save(ClassJoinRequest.builder().clazz(cls).student(me).status(RequestStatus.PENDING).studentMessage(message).build());
-            out.put("status", "PENDING");
+            enroll(cls, studentProfiles.ensure(me));
+            return new JoinClassResponse(cls.getUuid(), cls.getName(), "JOINED");
         }
-        return out;
+        requests.save(ClassJoinRequest.builder().clazz(cls).student(me).status(RequestStatus.PENDING).studentMessage(message).build());
+        return new JoinClassResponse(cls.getUuid(), cls.getName(), "PENDING");
     }
 
-    /** status = PENDING (default), APPROVED or REJECTED. */
+    /** Teacher of the class only. status = PENDING (default), APPROVED or REJECTED. */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> joinRequests(User me, UUID classId, String status) {
+    public List<JoinRequestResponse> joinRequests(User me, UUID classId, String status) {
         Access a = access.requireOwner(me, classId);
         RequestStatus wanted = parseStatus(status);
         List<ClassJoinRequest> rows = new ArrayList<>(requests.findByClassAndStatus(a.cls().getId(), wanted));
@@ -174,49 +166,46 @@ public class ClassDetailImp {
 
         Map<Long, Student> profiles = students.findByUser_IdIn(rows.stream().map(r -> r.getStudent().getId()).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(s -> s.getUser().getId(), s -> s, (x, y) -> x));
-        List<Map<String, Object>> out = new ArrayList<>();
+        List<JoinRequestResponse> out = new ArrayList<>();
         for (ClassJoinRequest r : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", r.getUuid());
-            Map<String, Object> st = new LinkedHashMap<>(ClassJson.person(r.getStudent()));
-            st.put("email", r.getStudent().getEmail());
+            PersonResponse who = ClassJson.person(r.getStudent());
             Student p = profiles.get(r.getStudent().getId());
-            st.put("student_code", p == null ? null : p.getStudentCode());
-            m.put("student", st);
-            m.put("message", r.getStudentMessage());
-            m.put("status", r.getStatus().name());
-            m.put("rejection_reason", r.getRejectionReason());
-            m.put("created_at", ClassJson.at(r.getCreatedAt()));
-            m.put("processed_at", ClassJson.at(r.getProcessedAt()));
-            out.add(m);
+            out.add(new JoinRequestResponse(
+                    r.getUuid(),
+                    new JoinRequestStudentResponse(who.id(), who.name(), who.avatarUrl(), r.getStudent().getEmail(),
+                            p == null ? null : p.getStudentCode()),
+                    r.getStudentMessage(),
+                    r.getStatus().name(),
+                    r.getRejectionReason(),
+                    ClassJson.at(r.getCreatedAt()),
+                    ClassJson.at(r.getProcessedAt())));
         }
         return out;
     }
 
-    /** Approve = mark the request APPROVED and put the student in the class, in one transaction. */
+    /** Approve = mark the request APPROVED and make the user a student of the class, in one transaction. */
     @Transactional
-    public Map<String, Object> approve(User me, UUID classId, UUID requestId) {
+    public JoinDecisionResponse approve(User me, UUID classId, UUID requestId) {
         Access a = access.requireOwner(me, classId);
         ClassJoinRequest r = requirePending(a.cls(), requestId);
-        Student profile = students.findByUser_Id(r.getStudent().getId())
-                .orElseThrow(() -> TemplateException.badRequestWithCode("STUDENT_PROFILE_MISSING", "Tài khoản này chưa có hồ sơ học sinh"));
+        Student profile = studentProfiles.ensure(r.getStudent());
         if (!members.existsByClassEntity_IdAndStudent_Id(a.cls().getId(), profile.getId())) {
             enroll(a.cls(), profile);
         }
         close(r, RequestStatus.APPROVED, me, null);
-        return Map.of("id", r.getUuid(), "status", "APPROVED");
+        return new JoinDecisionResponse(r.getUuid(), "APPROVED");
     }
 
     @Transactional
-    public Map<String, Object> reject(User me, UUID classId, UUID requestId, Map<String, Object> body) {
+    public JoinDecisionResponse reject(User me, UUID classId, UUID requestId, RejectJoinRequest body) {
         Access a = access.requireOwner(me, classId);
         ClassJoinRequest r = requirePending(a.cls(), requestId);
-        String reason = body != null && body.get("reason") instanceof String s && !s.isBlank() ? s.trim() : null;
+        String reason = body != null && body.reason() != null && !body.reason().isBlank() ? body.reason().trim() : null;
         if (reason != null && reason.length() > 500) {
             throw TemplateException.badRequest("Dữ liệu không hợp lệ", "reason: max 500 characters");
         }
         close(r, RequestStatus.REJECTED, me, reason);
-        return Map.of("id", r.getUuid(), "status", "REJECTED");
+        return new JoinDecisionResponse(r.getUuid(), "REJECTED");
     }
 
     private ClassJoinRequest requirePending(Class cls, UUID requestId) {
@@ -262,13 +251,13 @@ public class ClassDetailImp {
      * The time window decides; the stored status is used when there is no window, and COMPLETED / CANCELLED always mean ended.
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> exams(User me, UUID classId) {
+    public ClassExamsResponse exams(User me, UUID classId) {
         return exams(me, classId, OffsetDateTime.now());
     }
 
-    Map<String, Object> exams(User me, UUID classId, OffsetDateTime now) {
+    ClassExamsResponse exams(User me, UUID classId, OffsetDateTime now) {
         Access a = access.requireMember(me, classId);
-        Map<String, List<Map<String, Object>>> groups = new LinkedHashMap<>();
+        Map<String, List<ExamItemResponse>> groups = new LinkedHashMap<>();
         for (String g : List.of("upcoming", "ongoing", "ended", "draft")) groups.put(g, new ArrayList<>());
 
         for (Examination e : exams.findByClassEntity_IdOrderByFromTimeDesc(a.cls().getId())) {
@@ -277,15 +266,11 @@ public class ClassDetailImp {
             groups.get(bucket).add(examItem(e, bucket, a.owner()));
         }
         // soonest first for what is coming, newest first for what is over
-        groups.get("upcoming").sort(Comparator.comparing((Map<String, Object> m) -> (OffsetDateTime) m.get("from_time"),
+        groups.get("upcoming").sort(Comparator.comparing(ExamItemResponse::fromTime,
                 Comparator.nullsLast(Comparator.naturalOrder())));
 
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("upcoming", groups.get("upcoming"));
-        out.put("ongoing", groups.get("ongoing"));
-        out.put("ended", groups.get("ended"));
-        if (a.owner()) out.put("draft", groups.get("draft"));
-        return out;
+        return new ClassExamsResponse(groups.get("upcoming"), groups.get("ongoing"), groups.get("ended"),
+                a.owner() ? groups.get("draft") : null);
     }
 
     static String bucket(Examination e, OffsetDateTime now) {
@@ -299,18 +284,17 @@ public class ClassDetailImp {
         return st == ExamStatus.ONGOING ? "ongoing" : "upcoming";
     }
 
-    private static Map<String, Object> examItem(Examination e, String bucket, boolean owner) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", e.getUuid());
-        m.put("name", e.getExamName());
-        m.put("subject", e.getSubjectName());
-        m.put("status", e.getStatus().name());
-        m.put("bucket", bucket);
-        m.put("format", e.getFormat() == null ? null : e.getFormat().name());
-        m.put("from_time", e.getFromTime());
-        m.put("to_time", e.getToTime());
-        m.put("duration_minutes", e.getDurationMinutes());
-        if (owner) m.put("is_score_published", Boolean.TRUE.equals(e.getIsScorePublished()));
-        return m;
+    private static ExamItemResponse examItem(Examination e, String bucket, boolean owner) {
+        return new ExamItemResponse(
+                e.getUuid(),
+                e.getExamName(),
+                e.getSubjectName(),
+                e.getStatus().name(),
+                bucket,
+                e.getFormat() == null ? null : e.getFormat().name(),
+                e.getFromTime(),
+                e.getToTime(),
+                e.getDurationMinutes(),
+                owner ? Boolean.TRUE.equals(e.getIsScorePublished()) : null);
     }
 }

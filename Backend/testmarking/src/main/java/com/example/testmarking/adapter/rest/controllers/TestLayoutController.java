@@ -24,8 +24,8 @@ import java.util.UUID;
  * returned as JSON (see the Jackson annotations on the entity). Needs @EnableMethodSecurity (you have it).
  */
 @RestController
-@RequestMapping("/api/v1/web/templates")
-@PreAuthorize("hasRole('TEACHER')")
+@RequestMapping("/api/v1/templates")
+@PreAuthorize("isAuthenticated()")   // templates are a system feature: every logged-in user can create and use them
 public class TestLayoutController {
 
     private final TestLayoutImp service;
@@ -40,7 +40,7 @@ public class TestLayoutController {
 
     @GetMapping
     public ApiResponse<List<TestLayout>> findAll(@AuthenticationPrincipal SecurityUser me,
-                                                 @RequestParam(required = false) String status) {
+                                                 @RequestParam(name = "status", required = false) String status) {
         return ok(200, "OK", service.findAll(me.getUser(), status));
     }
 
@@ -57,12 +57,14 @@ public class TestLayoutController {
     }
 
     @GetMapping(value = "/{templateId}/image", produces = "image/svg+xml;charset=UTF-8")
-    public String image(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID templateId) {
+    public String image(@AuthenticationPrincipal SecurityUser me,
+                        @PathVariable("templateId") UUID templateId) {
         return service.getTemplateImage(me.getUser(), templateId);
     }
 
     @GetMapping("/{templateId}/download")
-    public ResponseEntity<byte[]> download(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID templateId) {
+    public ResponseEntity<byte[]> download(@AuthenticationPrincipal SecurityUser me,
+                                           @PathVariable("templateId") UUID templateId) {
         TestLayoutImp.Asset asset = service.downloadTemplateAsset(me.getUser(), templateId);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -73,18 +75,21 @@ public class TestLayoutController {
     }
 
     @GetMapping("/{templateId}")
-    public ApiResponse<TestLayout> findOne(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID templateId) {
+    public ApiResponse<TestLayout> findOne(@AuthenticationPrincipal SecurityUser me,
+                                           @PathVariable("templateId") UUID templateId) {
         return ok(200, "OK", service.findOne(me.getUser(), templateId));
     }
 
     @PutMapping("/{templateId}")
-    public ApiResponse<TestLayout> update(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID templateId,
+    public ApiResponse<TestLayout> update(@AuthenticationPrincipal SecurityUser me,
+                                          @PathVariable("templateId") UUID templateId,
                                           @RequestBody Map<String, Object> body) {
         return ok(200, "OK", service.update(me.getUser(), templateId, body));
     }
 
     @DeleteMapping("/{templateId}")
-    public ApiResponse<Map<String, String>> remove(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID templateId) {
+    public ApiResponse<Map<String, String>> remove(@AuthenticationPrincipal SecurityUser me,
+                                                   @PathVariable("templateId") UUID templateId) {
         service.remove(me.getUser(), templateId);
         return ok(200, "Xóa mẫu phiếu thành công", Map.of("message", "Xóa mẫu phiếu thành công"));
     }

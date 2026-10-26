@@ -3,6 +3,13 @@ package com.example.testmarking.application.imp;
 import com.example.testmarking.adapter.persistance.repository.ClassDocumentRepository;
 import com.example.testmarking.adapter.persistance.repository.ClassPostCommentRepository;
 import com.example.testmarking.adapter.persistance.repository.ClassPostRepository;
+import com.example.testmarking.adapter.rest.dtos.request.CommentRequest;
+import com.example.testmarking.adapter.rest.dtos.request.CreatePostRequest;
+import com.example.testmarking.adapter.rest.dtos.request.UpdatePostRequest;
+import com.example.testmarking.adapter.rest.dtos.response.CommentResponse;
+import com.example.testmarking.adapter.rest.dtos.response.DocumentResponse;
+import com.example.testmarking.adapter.rest.dtos.response.PostResponse;
+import com.example.testmarking.adapter.rest.dtos.response.ReactionSummaryResponse;
 import com.example.testmarking.application.imp.ClassAccessImp.Access;
 import com.example.testmarking.domain.entities.ClassDocument;
 import com.example.testmarking.domain.entities.ClassPost;
@@ -20,9 +27,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The stream of a class: posts, comments and replies.
- *  - the teacher of the class writes / edits / pins / deletes posts and can hide or delete any comment
- *  - students (and the teacher) comment and react; people edit or delete only their own comments
+ * The stream of a class: posts, comments and replies. Rights are per class:
+ *  - every member (teacher or student of THIS class) writes posts, comments and reacts; people edit only their own posts
+ *    and comments and can delete their own
+ *  - a student writes normal posts only (type POST, published, not pinned)
+ *  - the teacher of the class also writes announcements, pins / closes posts, deletes any post and hides or deletes any comment
  * Post and comment text is plain text (the client must not render it as HTML).
  */
 @Service
@@ -43,7 +52,7 @@ public class ClassPostImp {
 
     /** Posts with their attachments, comments (flat, replies point to parent_id) and reaction summaries. */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> feed(User me, UUID classId) {
+    public List<PostResponse> feed(User me, UUID classId) {
         Access a = access.requireMember(me, classId);
         List<ClassPost> rows = posts.findFeed(a.cls().getId(), a.owner());
         if (rows.isEmpty()) return List.of();
@@ -63,103 +72,117 @@ public class ClassPostImp {
         Map<Long, List<ClassPostComment>> commentsByPost = new HashMap<>();
         for (ClassPostComment c : visible) commentsByPost.computeIfAbsent(c.getPost().getId(), k -> new ArrayList<>()).add(c);
 
-        Map<Long, Map<String, Object>> postReactions = reactions.postSummaries(postIds, me.getId());
-        Map<Long, Map<String, Object>> commentReactions = reactions.commentSummaries(
+        Map<Long, ReactionSummaryResponse> postReactions = reactions.postSummaries(postIds, me.getId());
+        Map<Long, ReactionSummaryResponse> commentReactions = reactions.commentSummaries(
                 visible.stream().map(ClassPostComment::getId).toList(), me.getId());
 
-        List<Map<String, Object>> out = new ArrayList<>();
+        List<PostResponse> out = new ArrayList<>();
         for (ClassPost p : rows) {
-            Map<String, Object> m = postItem(p, a.owner());
-            List<Map<String, Object>> files = new ArrayList<>();
+            List<DocumentResponse> files = new ArrayList<>();
             for (ClassDocument d : docsByPost.getOrDefault(p.getId(), List.of())) {
                 files.add(ClassDocumentImp.item(d, a.owner() || d.getUploadedByUser().getId().equals(me.getId())));
             }
-            m.put("attachments", files);
-            List<Map<String, Object>> cs = new ArrayList<>();
+            List<CommentResponse> cs = new ArrayList<>();
             for (ClassPostComment c : commentsByPost.getOrDefault(p.getId(), List.of())) {
-                Map<String, Object> ci = commentItem(c, me, a.owner());
-                ci.put("reactions", commentReactions.get(c.getId()));
-                cs.add(ci);
+                cs.add(commentItem(c, me, a.owner(), commentReactions.get(c.getId())));
             }
-            m.put("comments", cs);
-            m.put("comment_count", cs.stream().filter(c -> !Boolean.TRUE.equals(c.get("is_hidden"))).count());
-            m.put("reactions", postReactions.get(p.getId()));
-            out.add(m);
+            long visibleCount = cs.stream().filter(c -> !c.isHidden()).count();
+            out.add(postItem(p, me, a.owner(), files, cs, visibleCount, postReactions.get(p.getId())));
         }
         return out;
     }
 
-    // ─── posts (teacher) ─────────────────────────────────────────
+    // ─── posts ───────────────────────────────────────────────────
 
+    /** Any member writes a post. A student is limited to a normal, published, unpinned post. */
     @Transactional
-    public Map<String, Object> createPost(User me, UUID classId, Map<String, Object> body) {
-        Access a = access.requireOwner(me, classId);
+    public PostResponse createPost(User me, UUID classId, CreatePostRequest body) {
+        Access a = access.requireMember(me, classId);
         List<String> errors = new ArrayList<>();
-        String content = text(body, "content", MAX_POST, true, errors);
-        String title = text(body, "title", MAX_TITLE, false, errors);
-        ClassPostType type = enumOf(body, "type", ClassPostType.class, ClassPostType.POST, errors);
-        ClassPostStatus status = enumOf(body, "status", ClassPostStatus.class, ClassPostStatus.PUBLISHED, errors);
-        Boolean allowComments = flag(body, "allow_comments", true, errors);
-        Boolean pinned = flag(body, "is_pinned", false, errors);
+        String content = text("content", body.content(), MAX_POST, true, errors);
+        String title = text("title", body.title(), MAX_TITLE, false, errors);
+        ClassPostType type = enumOf("type", body.type(), ClassPostType.class, ClassPostType.POST, errors);
+        ClassPostStatus status = enumOf("status", body.status(), ClassPostStatus.class, ClassPostStatus.PUBLISHED, errors);
+        boolean allowComments = body.allowComments() == null || body.allowComments();
+        boolean pinned = Boolean.TRUE.equals(body.isPinned());
         fail(errors);
+        if (!a.owner() && (type != ClassPostType.POST || status != ClassPostStatus.PUBLISHED || pinned)) {
+            throw TemplateException.forbidden("Học sinh chỉ được đăng bài thường (không phải thông báo, không ghim, không lưu nháp)");
+        }
 
         ClassPost p = ClassPost.builder().classEntity(a.cls()).author(me).type(type).title(title).content(content)
                 .status(status).allowComments(allowComments).isPinned(pinned).build();
         posts.save(p);
-        Map<String, Object> m = postItem(p, true);
-        m.put("attachments", List.of());
-        m.put("comments", List.of());
-        m.put("comment_count", 0);
-        m.put("reactions", reactions.postSummary(p.getId(), me.getId()));
-        return m;
+        return postItem(p, me, a.owner(), List.of(), List.of(), 0, reactions.postSummary(p.getId(), me.getId()));
     }
 
+    /**
+     * Author: title, content, type (students: POST only), comments on/off. Teacher of the class: also status (close / reopen)
+     * and pin on any post, but never the words of somebody else.
+     */
     @Transactional
-    public Map<String, Object> updatePost(User me, UUID classId, UUID postId, Map<String, Object> body) {
-        Access a = access.requireOwner(me, classId);
+    public PostResponse updatePost(User me, UUID classId, UUID postId, UpdatePostRequest body) {
+        Access a = access.requireMember(me, classId);
         ClassPost p = requirePost(a, postId);
+        boolean author = isAuthor(p, me);
+        boolean touchesWords = body.content() != null || body.title() != null || body.type() != null;
+        if (touchesWords && !author) throw TemplateException.forbidden("Bạn chỉ có thể sửa bài đăng của mình");
+        if ((body.status() != null || body.isPinned() != null) && !a.owner()) {
+            throw TemplateException.forbidden("Chỉ giáo viên của lớp mới được ghim hoặc đổi trạng thái bài đăng");
+        }
+        if (body.allowComments() != null && !author && !a.owner()) {
+            throw TemplateException.forbidden("Bạn không có quyền sửa bài đăng này");
+        }
+
         List<String> errors = new ArrayList<>();
-        if (body.containsKey("content")) p.setContent(text(body, "content", MAX_POST, true, errors));
-        if (body.containsKey("title")) p.setTitle(text(body, "title", MAX_TITLE, false, errors));
-        if (body.containsKey("type")) p.setType(enumOf(body, "type", ClassPostType.class, p.getType(), errors));
-        if (body.containsKey("status")) {
-            ClassPostStatus next = enumOf(body, "status", ClassPostStatus.class, p.getStatus(), errors);
+        if (body.content() != null) p.setContent(text("content", body.content(), MAX_POST, true, errors));
+        if (body.title() != null) p.setTitle(text("title", body.title(), MAX_TITLE, false, errors));
+        if (body.type() != null) {
+            ClassPostType next = enumOf("type", body.type(), ClassPostType.class, p.getType(), errors);
+            if (!a.owner() && next != ClassPostType.POST) throw TemplateException.forbidden("Học sinh chỉ được đăng bài thường");
+            p.setType(next);
+        }
+        if (body.status() != null) {
+            ClassPostStatus next = enumOf("status", body.status(), ClassPostStatus.class, p.getStatus(), errors);
             if (next == ClassPostStatus.PUBLISHED && p.getPublishedAt() == null) p.setPublishedAt(LocalDateTime.now());
             p.setStatus(next);
         }
-        if (body.containsKey("allow_comments")) p.setAllowComments(flag(body, "allow_comments", p.getAllowComments(), errors));
-        if (body.containsKey("is_pinned")) p.setIsPinned(flag(body, "is_pinned", p.getIsPinned(), errors));
+        if (body.allowComments() != null) p.setAllowComments(body.allowComments());
+        if (body.isPinned() != null) p.setIsPinned(body.isPinned());
         fail(errors);
         posts.save(p);
-        return postItem(p, true);
+        return postItem(p, me, a.owner(), null, null, null, null);
     }
 
-    /** Soft delete. Its comments and files disappear from the stream with it. */
+    /** Soft delete by the author or by the teacher of the class. Its comments and files disappear from the stream with it. */
     @Transactional
     public void deletePost(User me, UUID classId, UUID postId) {
-        Access a = access.requireOwner(me, classId);
+        Access a = access.requireMember(me, classId);
         ClassPost p = requirePost(a, postId);
+        if (!a.owner() && !isAuthor(p, me)) {
+            throw TemplateException.forbidden("Bạn không có quyền xóa bài đăng này");
+        }
         p.setDeletedAt(LocalDateTime.now());
         posts.save(p);
     }
 
     // ─── comments ────────────────────────────────────────────────
 
-    /** body: { "content": "...", "parent_comment_id": "<uuid>" (optional, to reply) }. */
+    /** body: content, and parent_comment_id (uuid, optional) to reply. */
     @Transactional
-    public Map<String, Object> addComment(User me, UUID classId, UUID postId, Map<String, Object> body) {
+    public CommentResponse addComment(User me, UUID classId, UUID postId, CommentRequest body) {
         Access a = access.requireMember(me, classId);
         ClassPost p = requirePost(a, postId);
         if (p.getStatus() != ClassPostStatus.PUBLISHED || !Boolean.TRUE.equals(p.getAllowComments())) {
             throw TemplateException.badRequestWithCode("COMMENTS_DISABLED", "Bài đăng này không cho phép bình luận");
         }
         List<String> errors = new ArrayList<>();
-        String content = text(body, "content", MAX_COMMENT, true, errors);
+        String content = text("content", body.content(), MAX_COMMENT, true, errors);
         fail(errors);
 
         ClassPostComment parent = null;
-        if (body.get("parent_comment_id") != null) {
-            UUID parentId = uuid(body.get("parent_comment_id"));
+        if (body.parentCommentId() != null && !body.parentCommentId().isBlank()) {
+            UUID parentId = uuid(body.parentCommentId());
             ClassPostComment found = comments.findByUuid(parentId)
                     .filter(c -> c.getDeletedAt() == null && !Boolean.TRUE.equals(c.getIsHidden()) && c.getPost().getId().equals(p.getId()))
                     .orElseThrow(() -> TemplateException.notFound("COMMENT_NOT_FOUND", "Bình luận không tồn tại"));
@@ -167,24 +190,22 @@ public class ClassPostImp {
         }
         ClassPostComment c = ClassPostComment.builder().post(p).author(me).parentComment(parent).content(content).build();
         comments.save(c);
-        Map<String, Object> m = commentItem(c, me, a.owner());
-        m.put("reactions", reactions.commentSummary(c.getId(), me.getId()));
-        return m;
+        return commentItem(c, me, a.owner(), reactions.commentSummary(c.getId(), me.getId()));
     }
 
     /** Only the author edits a comment. */
     @Transactional
-    public Map<String, Object> updateComment(User me, UUID classId, UUID commentId, Map<String, Object> body) {
+    public CommentResponse updateComment(User me, UUID classId, UUID commentId, CommentRequest body) {
         Access a = access.requireMember(me, classId);
         ClassPostComment c = requireComment(a, commentId);
         if (!c.getAuthor().getId().equals(me.getId())) {
             throw TemplateException.forbidden("Bạn chỉ có thể sửa bình luận của mình");
         }
         List<String> errors = new ArrayList<>();
-        c.setContent(text(body, "content", MAX_COMMENT, true, errors));
+        c.setContent(text("content", body.content(), MAX_COMMENT, true, errors));
         fail(errors);
         comments.save(c);
-        return commentItem(c, me, a.owner());
+        return commentItem(c, me, a.owner(), null);
     }
 
     /** The author or the teacher of the class. */
@@ -201,14 +222,14 @@ public class ClassPostImp {
 
     /** Teacher hides (or shows again) a comment. Students stop seeing it, the author does not get a notice. */
     @Transactional
-    public Map<String, Object> setCommentHidden(User me, UUID classId, UUID commentId, boolean hidden) {
+    public CommentResponse setCommentHidden(User me, UUID classId, UUID commentId, boolean hidden) {
         Access a = access.requireOwner(me, classId);
         ClassPostComment c = requireComment(a, commentId);
         c.setIsHidden(hidden);
         c.setHiddenByUser(hidden ? me : null);
         c.setHiddenAt(hidden ? LocalDateTime.now() : null);
         comments.save(c);
-        return commentItem(c, me, true);
+        return commentItem(c, me, true, null);
     }
 
     // ─── helpers ─────────────────────────────────────────────────
@@ -228,52 +249,59 @@ public class ClassPostImp {
                 .orElseThrow(() -> TemplateException.notFound("COMMENT_NOT_FOUND", "Bình luận không tồn tại"));
     }
 
-    private static Map<String, Object> postItem(ClassPost p, boolean owner) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", p.getUuid());
-        m.put("type", p.getType().name());
-        m.put("status", p.getStatus().name());
-        m.put("title", p.getTitle());
-        m.put("content", p.getContent());
-        m.put("allow_comments", Boolean.TRUE.equals(p.getAllowComments()));
-        m.put("is_pinned", Boolean.TRUE.equals(p.getIsPinned()));
-        m.put("author", ClassJson.person(p.getAuthor()));
-        m.put("published_at", ClassJson.at(p.getPublishedAt()));
-        m.put("created_at", ClassJson.at(p.getCreatedAt()));
-        m.put("updated_at", ClassJson.at(p.getUpdatedAt()));
-        m.put("can_edit", owner);   // only the teacher of the class writes posts
-        return m;
+    private static boolean isAuthor(ClassPost p, User me) {
+        return p.getAuthor().getId().equals(me.getId());
     }
 
-    private static Map<String, Object> commentItem(ClassPostComment c, User me, boolean owner) {
+    /** attachments / comments / commentCount / reactions are null when the endpoint does not load them (they are then left out of the JSON). */
+    private static PostResponse postItem(ClassPost p, User me, boolean owner, List<DocumentResponse> attachments,
+                                         List<CommentResponse> comments, Number commentCount, ReactionSummaryResponse reactions) {
+        boolean author = isAuthor(p, me);
+        return new PostResponse(
+                p.getUuid(),
+                p.getType().name(),
+                p.getStatus().name(),
+                p.getTitle(),
+                p.getContent(),
+                Boolean.TRUE.equals(p.getAllowComments()),
+                Boolean.TRUE.equals(p.getIsPinned()),
+                ClassJson.person(p.getAuthor()),
+                ClassJson.at(p.getPublishedAt()),
+                ClassJson.at(p.getCreatedAt()),
+                ClassJson.at(p.getUpdatedAt()),
+                author,
+                author || owner,
+                owner,
+                attachments,
+                comments,
+                commentCount == null ? null : commentCount.longValue(),
+                reactions);
+    }
+
+    private static CommentResponse commentItem(ClassPostComment c, User me, boolean owner, ReactionSummaryResponse reactions) {
         boolean mine = c.getAuthor().getId().equals(me.getId());
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", c.getUuid());
-        m.put("parent_id", c.getParentComment() == null ? null : c.getParentComment().getUuid());
-        m.put("author", ClassJson.person(c.getAuthor()));
-        m.put("content", c.getContent());
-        m.put("is_hidden", Boolean.TRUE.equals(c.getIsHidden()));
-        m.put("created_at", ClassJson.at(c.getCreatedAt()));
-        m.put("updated_at", ClassJson.at(c.getUpdatedAt()));
-        m.put("can_edit", mine);
-        m.put("can_delete", mine || owner);
-        m.put("can_hide", owner);
-        return m;
+        return new CommentResponse(
+                c.getUuid(),
+                c.getParentComment() == null ? null : c.getParentComment().getUuid(),
+                ClassJson.person(c.getAuthor()),
+                c.getContent(),
+                Boolean.TRUE.equals(c.getIsHidden()),
+                ClassJson.at(c.getCreatedAt()),
+                ClassJson.at(c.getUpdatedAt()),
+                mine,
+                mine || owner,
+                owner,
+                reactions);
     }
 
-    // body parsing
+    // field parsing
 
-    private static String text(Map<String, Object> body, String key, int max, boolean required, List<String> errors) {
-        Object raw = body == null ? null : body.get(key);
-        if (raw == null || (raw instanceof String s0 && s0.isBlank())) {
+    private static String text(String key, String raw, int max, boolean required, List<String> errors) {
+        if (raw == null || raw.isBlank()) {
             if (required) errors.add(key + ": must not be blank");
             return null;
         }
-        if (!(raw instanceof String s)) {
-            errors.add(key + ": must be a string");
-            return null;
-        }
-        String v = s.strip();
+        String v = raw.strip();
         if (v.length() > max) {
             errors.add(key + ": max " + max + " characters");
             return null;
@@ -281,31 +309,19 @@ public class ClassPostImp {
         return v;
     }
 
-    private static <E extends Enum<E>> E enumOf(Map<String, Object> body, String key, java.lang.Class<E> type, E fallback, List<String> errors) {
-        Object raw = body.get(key);
-        if (raw == null) return fallback;
-        if (raw instanceof String s) {
-            try {
-                return Enum.valueOf(type, s.trim().toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-                // fall through
-            }
-        }
-        errors.add(key + ": must be one of " + Arrays.toString(type.getEnumConstants()));
-        return fallback;
-    }
-
-    private static Boolean flag(Map<String, Object> body, String key, Boolean fallback, List<String> errors) {
-        Object raw = body.get(key);
-        if (raw == null) return fallback;
-        if (raw instanceof Boolean b) return b;
-        errors.add(key + ": must be true or false");
-        return fallback;
-    }
-
-    private static UUID uuid(Object raw) {
+    private static <E extends Enum<E>> E enumOf(String key, String raw, java.lang.Class<E> type, E fallback, List<String> errors) {
+        if (raw == null || raw.isBlank()) return fallback;
         try {
-            return UUID.fromString(String.valueOf(raw));
+            return Enum.valueOf(type, raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            errors.add(key + ": must be one of " + Arrays.toString(type.getEnumConstants()));
+            return fallback;
+        }
+    }
+
+    private static UUID uuid(String raw) {
+        try {
+            return UUID.fromString(raw.trim());
         } catch (IllegalArgumentException e) {
             throw TemplateException.badRequest("Dữ liệu không hợp lệ", "parent_comment_id: not a uuid");
         }

@@ -18,10 +18,10 @@ public class VerificationCode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "code", nullable = false)
     private String code;
 
-    @Column(nullable = false)
+    @Column(name = "expiry_date", nullable = false)
     private LocalDateTime expiryDate;
 
     @OneToOne

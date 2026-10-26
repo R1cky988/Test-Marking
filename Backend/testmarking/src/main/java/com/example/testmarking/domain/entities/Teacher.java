@@ -6,11 +6,12 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@Data
 @Entity
-@Table(name = "teachers")
 @Getter
 @Setter
-@Data
+@Table(name = "teachers")
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Teacher {

@@ -30,26 +30,40 @@ public interface ClassRepository extends JpaRepository<Class, Long> {
      */
     @Query(value = "select c from Class c join fetch c.createdUser u where u.id = :userId "
             + "and (:archivedMode = 0 or (:archivedMode = 1 and c.isArchived = false) or (:archivedMode = 2 and c.isArchived = true)) "
-            + "and (:schoolYear = '' or c.schoolYear = :schoolYear) "
             + "and (:search = '' or lower(c.name) like concat('%', :search, '%')) "
             + "order by c.createdAt desc, c.id desc",
             countQuery = "select count(c) from Class c where c.createdUser.id = :userId "
                     + "and (:archivedMode = 0 or (:archivedMode = 1 and c.isArchived = false) or (:archivedMode = 2 and c.isArchived = true)) "
-                    + "and (:schoolYear = '' or c.schoolYear = :schoolYear) "
                     + "and (:search = '' or lower(c.name) like concat('%', :search, '%'))")
     Page<Class> findOwned(@Param("userId") Long userId, @Param("archivedMode") int archivedMode,
-                          @Param("schoolYear") String schoolYear, @Param("search") String search, Pageable pageable);
+                          @Param("search") String search, Pageable pageable);
 
     /** Classes a student is enrolled in (archived classes are hidden from students). */
     @Query(value = "select c from Class c join fetch c.createdUser where c.isArchived = false "
             + "and exists (select 1 from ClassStudent cs where cs.classEntity = c and cs.student.user.id = :userId) "
-            + "and (:schoolYear = '' or c.schoolYear = :schoolYear) "
             + "and (:search = '' or lower(c.name) like concat('%', :search, '%')) "
             + "order by c.createdAt desc, c.id desc",
             countQuery = "select count(c) from Class c where c.isArchived = false "
                     + "and exists (select 1 from ClassStudent cs where cs.classEntity = c and cs.student.user.id = :userId) "
-                    + "and (:schoolYear = '' or c.schoolYear = :schoolYear) "
                     + "and (:search = '' or lower(c.name) like concat('%', :search, '%'))")
-    Page<Class> findJoined(@Param("userId") Long userId, @Param("schoolYear") String schoolYear,
+    Page<Class> findJoined(@Param("userId") Long userId,
                            @Param("search") String search, Pageable pageable);
+
+    /**
+     * "My classes": the ones I created (I am their teacher) plus the ones I joined (I am a student there), newest first.
+     * archivedMode as in findOwned; a class I only joined is never shown once it is archived.
+     */
+    @Query(value = "select c from Class c join fetch c.createdUser u where "
+            + "(u.id = :userId or (c.isArchived = false "
+            + "  and exists (select 1 from ClassStudent cs where cs.classEntity = c and cs.student.user.id = :userId))) "
+            + "and (:archivedMode = 0 or (:archivedMode = 1 and c.isArchived = false) or (:archivedMode = 2 and c.isArchived = true)) "
+            + "and (:search = '' or lower(c.name) like concat('%', :search, '%')) "
+            + "order by c.createdAt desc, c.id desc",
+            countQuery = "select count(c) from Class c where "
+                    + "(c.createdUser.id = :userId or (c.isArchived = false "
+                    + "  and exists (select 1 from ClassStudent cs where cs.classEntity = c and cs.student.user.id = :userId))) "
+                    + "and (:archivedMode = 0 or (:archivedMode = 1 and c.isArchived = false) or (:archivedMode = 2 and c.isArchived = true)) "
+                    + "and (:search = '' or lower(c.name) like concat('%', :search, '%'))")
+    Page<Class> findMine(@Param("userId") Long userId, @Param("archivedMode") int archivedMode,
+                         @Param("search") String search, Pageable pageable);
 }

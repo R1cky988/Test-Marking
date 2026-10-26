@@ -42,7 +42,7 @@ public class UserController {
             @RequestBody RegisterRequest request
     ){
         try{
-            userPort.register(request);   // was missing: the endpoint answered "success" without creating the user
+            userPort.register(request);
             return ResponseEntity.ok(ApiResponse.builder()
                     .status(1)
                     .message("Register successfully")

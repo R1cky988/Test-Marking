@@ -10,17 +10,26 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * One place that decides who may see / change a class:
- *  - owner   = the teacher who created it (Class.createdUser): can post, approve students, upload files...
- *  - student = a row in ClassStudent: can read, comment and react
- * Everybody else gets 403 (or 404 when the class does not exist).
+ * One place that decides who may see / change a class. Every account has the same global role (USER); what a person
+ * may do is decided PER CLASS:
+ *  - TEACHER of the class = the user who created it (Class.createdUser): sees everything, approves join requests,
+ *    pins / announces, removes members, moderates posts and comments
+ *  - STUDENT of the class = a row in ClassStudent: reads, posts, comments, reacts and uploads files
+ * The same person can be TEACHER in one class and STUDENT in another. Everybody else gets 403 (404 when the class
+ * does not exist).
  */
 @Component
 public class ClassAccessImp {
 
+    public static final String TEACHER = "TEACHER";
+    public static final String STUDENT = "STUDENT";
+
     /** The class and what the current user is in it. */
     public record Access(Class cls, boolean owner) {
         public boolean student() { return !owner; }
+
+        /** Role of the caller inside this class. */
+        public String role() { return owner ? TEACHER : STUDENT; }
     }
 
     private final ClassRepository classes;
@@ -45,7 +54,7 @@ public class ClassAccessImp {
         return new Access(cls, owner);
     }
 
-    /** Only the teacher who owns the class. */
+    /** Only the teacher of this class (the user who created it). */
     public Access requireOwner(User me, UUID classId) {
         Class cls = find(classId);
         if (!isOwner(me, cls)) {

@@ -6,10 +6,11 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@Data
 @Table(name = "students")
 @Getter
 @Setter
-@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity

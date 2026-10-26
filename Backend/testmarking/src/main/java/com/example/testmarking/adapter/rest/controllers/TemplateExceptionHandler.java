@@ -14,18 +14,28 @@ import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /** Same error envelope as NestJS: { "error": { "code", "message", "details": [] } }. */
-@RestControllerAdvice(assignableTypes = TestLayoutController.class)
+@RestControllerAdvice
 public class TemplateExceptionHandler {
 
     @ExceptionHandler(TemplateException.class)
     public ResponseEntity<Map<String, Object>> handle(TemplateException e) {
         HttpStatus status = switch (e.getKind()) {
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case FORBIDDEN -> FORBIDDEN;
+            case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
         };
-        List<String> details = e.getDetails();
+
+        List<String> details = e.getDetails() == null
+                ? List.of()
+                : e.getDetails();
+
         return ResponseEntity.status(status)
-                .body(Map.of("error", Map.of("code", e.getCode(), "message", e.getMessage(), "details", details)));
+                .body(Map.of(
+                        "error", Map.of(
+                                "code", e.getCode(),
+                                "message", e.getMessage(),
+                                "details", details
+                        )
+                ));
     }
 }

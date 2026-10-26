@@ -1,6 +1,5 @@
 package com.example.testmarking.adapter.rest.dtos.request;
 
-import com.example.testmarking.domain.entities.enums.Role;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -17,5 +16,4 @@ public class RegisterRequest {
     private String lastName;
     private LocalDate dob;
     private String gender;
-    private Role role;
 }

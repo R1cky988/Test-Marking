@@ -15,11 +15,12 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 /**
- * DEMO ONLY (demo.enabled=true). Creates a teacher, three students, one class with posts, a comment, a pending join
+ * DEMO ONLY (demo.enabled=true). Creates four users (all role USER), one class with posts, a comment, a pending join
  * request and three exams, so login / class list / class detail can be shown without SMTP or manual SQL.
  * Idempotent: does nothing when teacher@demo.vn already exists. Delete this file when you stop demoing.
  *
- *   teacher@demo.vn  / Demo12345        student@demo.vn / Demo12345      class join code: DEMO01
+ *   teacher@demo.vn  / Demo12345  (teaches the class because he created it)
+ *   student@demo.vn  / Demo12345  (student of the class)       class join code: DEMO01
  */
 @Component
 @ConditionalOnProperty(name = "demo.enabled", havingValue = "true")
@@ -43,10 +44,11 @@ public class DemoDataSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (users.existsByEmail("teacher@demo.vn")) return;
 
-        User teacher = user("teacher@demo.vn", "0900000001", "Nguyễn Thị", "Lan", Role.TEACHER);
-        User an = user("student@demo.vn", "0900000002", "Trần Văn", "An", Role.STUDENT);
-        User binh = user("binh@demo.vn", "0900000003", "Lê Thị", "Bình", Role.STUDENT);
-        User chi = user("chi@demo.vn", "0900000004", "Phạm Minh", "Chi", Role.STUDENT);
+        User teacher = user("teacher@demo.vn", "0900000001", "Lan", "Nguyễn Thị");
+        User an = user("student@demo.vn", "0900000002", "An", "Trần Văn");
+        User binh = user("binh@demo.vn", "0900000003", "Bình", "Lê Thị");
+        User chi = user("chi@demo.vn", "0900000004", "Chi", "Phạm Minh");
+        profile(teacher, "HS000");
         Student sAn = profile(an, "HS001"), sBinh = profile(binh, "HS002");
         profile(chi, "HS003");
 
@@ -82,12 +84,12 @@ public class DemoDataSeeder implements CommandLineRunner {
         exam(teacher, c, "Kiểm tra chương 1", ExamStatus.COMPLETED, now.minusDays(7), now.minusDays(7).plusMinutes(45), 45);
     }
 
-    private User user(String email, String phone, String first, String last, Role role) {
+    private User user(String email, String phone, String first, String last) {
         return users.save(User.builder()
                 .uuid(java.util.UUID.randomUUID()).email(email).phoneNumber(phone)
                 .password(passwordEncoder.encode(PASSWORD))
                 .firstName(first).lastName(last).avatarUrl("base_avatar")
-                .role(role).status(UserStatus.ACTIVE).emailVerifiedAt(LocalDate.now()).build());
+                .role(Role.USER).status(UserStatus.ACTIVE).emailVerifiedAt(LocalDate.now()).build());
     }
 
     private Student profile(User u, String code) {

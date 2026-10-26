@@ -1,6 +1,10 @@
 package com.example.testmarking.application.imp;
 
 import com.example.testmarking.adapter.persistance.repository.*;
+import com.example.testmarking.adapter.rest.dtos.request.ReactionRequest;
+import com.example.testmarking.adapter.rest.dtos.response.ReactionCountResponse;
+import com.example.testmarking.adapter.rest.dtos.response.ReactionSummaryResponse;
+import com.example.testmarking.adapter.rest.dtos.response.ReactorResponse;
 import com.example.testmarking.application.imp.ClassAccessImp.Access;
 import com.example.testmarking.domain.entities.*;
 import com.example.testmarking.domain.entities.enums.ClassPostStatus;
@@ -29,9 +33,9 @@ public class ClassReactionImp {
 
     // ─── posts ───────────────────────────────────────────────────
 
-    /** body: { "reaction_type": "LIKE" } to set/change, { "reaction_type": null } to remove. Returns the new summary. */
+    /** body.reaction_type = "LIKE" to set/change, null to remove. Returns the new summary. */
     @Transactional
-    public Map<String, Object> setPostReaction(User me, UUID classId, UUID postId, Map<String, Object> body) {
+    public ReactionSummaryResponse setPostReaction(User me, UUID classId, UUID postId, ReactionRequest body) {
         ClassPost post = requirePost(me, classId, postId);
         ClassReactionType type = parseType(body);
         Optional<ClassPostReaction> existing = postReactions.findByPost_IdAndUser_Id(post.getId(), me.getId());
@@ -49,9 +53,9 @@ public class ClassReactionImp {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> postReactors(User me, UUID classId, UUID postId) {
+    public List<ReactorResponse> postReactors(User me, UUID classId, UUID postId) {
         ClassPost post = requirePost(me, classId, postId);
-        List<Map<String, Object>> out = new ArrayList<>();
+        List<ReactorResponse> out = new ArrayList<>();
         for (ClassPostReaction r : postReactions.findReactors(post.getId())) {
             out.add(reactor(r.getUser(), r.getReactionType(), r.getUpdatedAt() != null ? r.getUpdatedAt() : r.getCreatedAt()));
         }
@@ -60,7 +64,7 @@ public class ClassReactionImp {
 
     /** Summary of one post as seen by one viewer. */
     @Transactional(readOnly = true)
-    public Map<String, Object> postSummary(Long postId, Long viewerUserId) {
+    public ReactionSummaryResponse postSummary(Long postId, Long viewerUserId) {
         ClassReactionType mine = postReactions.findByPost_IdAndUser_Id(postId, viewerUserId)
                 .map(ClassPostReaction::getReactionType).orElse(null);
         return summary(postReactions.countByType(postId), mine);
@@ -68,7 +72,7 @@ public class ClassReactionImp {
 
     /** For the feed: summaries of many posts in two queries. Posts nobody reacted to get an empty summary. */
     @Transactional(readOnly = true)
-    public Map<Long, Map<String, Object>> postSummaries(Collection<Long> postIds, Long viewerUserId) {
+    public Map<Long, ReactionSummaryResponse> postSummaries(Collection<Long> postIds, Long viewerUserId) {
         if (postIds.isEmpty()) return Map.of();
         return summaries(postIds, postReactions.countByTypeForPosts(postIds), postReactions.findViewerReactions(postIds, viewerUserId));
     }
@@ -76,7 +80,7 @@ public class ClassReactionImp {
     // ─── comments ────────────────────────────────────────────────
 
     @Transactional
-    public Map<String, Object> setCommentReaction(User me, UUID classId, UUID commentId, Map<String, Object> body) {
+    public ReactionSummaryResponse setCommentReaction(User me, UUID classId, UUID commentId, ReactionRequest body) {
         ClassPostComment comment = requireComment(me, classId, commentId);
         ClassReactionType type = parseType(body);
         Optional<ClassCommentReaction> existing = commentReactions.findByComment_IdAndUser_Id(comment.getId(), me.getId());
@@ -94,9 +98,9 @@ public class ClassReactionImp {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> commentReactors(User me, UUID classId, UUID commentId) {
+    public List<ReactorResponse> commentReactors(User me, UUID classId, UUID commentId) {
         ClassPostComment comment = requireComment(me, classId, commentId);
-        List<Map<String, Object>> out = new ArrayList<>();
+        List<ReactorResponse> out = new ArrayList<>();
         for (ClassCommentReaction r : commentReactions.findReactors(comment.getId())) {
             out.add(reactor(r.getUser(), r.getReactionType(), r.getUpdatedAt() != null ? r.getUpdatedAt() : r.getCreatedAt()));
         }
@@ -104,14 +108,14 @@ public class ClassReactionImp {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> commentSummary(Long commentId, Long viewerUserId) {
+    public ReactionSummaryResponse commentSummary(Long commentId, Long viewerUserId) {
         ClassReactionType mine = commentReactions.findByComment_IdAndUser_Id(commentId, viewerUserId)
                 .map(ClassCommentReaction::getReactionType).orElse(null);
         return summary(commentReactions.countByType(commentId), mine);
     }
 
     @Transactional(readOnly = true)
-    public Map<Long, Map<String, Object>> commentSummaries(Collection<Long> commentIds, Long viewerUserId) {
+    public Map<Long, ReactionSummaryResponse> commentSummaries(Collection<Long> commentIds, Long viewerUserId) {
         if (commentIds.isEmpty()) return Map.of();
         return summaries(commentIds, commentReactions.countByTypeForComments(commentIds), commentReactions.findViewerReactions(commentIds, viewerUserId));
     }
@@ -143,61 +147,46 @@ public class ClassReactionImp {
         return c;
     }
 
-    private static ClassReactionType parseType(Map<String, Object> body) {
-        Object raw = body == null ? null : body.get("reaction_type");
-        if (raw == null) return null;
-        if (raw instanceof String s) {
-            try {
-                return ClassReactionType.valueOf(s.trim().toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-                // fall through
-            }
+    private static ClassReactionType parseType(ReactionRequest body) {
+        String raw = body == null ? null : body.reactionType();
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return ClassReactionType.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            // fall through
         }
         throw TemplateException.badRequest("reaction_type không hợp lệ",
                 "reaction_type must be one of " + Arrays.toString(ClassReactionType.values()) + " or null");
     }
 
-    private static Map<Long, Map<String, Object>> summaries(Collection<Long> ids, List<Object[]> counts, List<Object[]> mine) {
+    private static Map<Long, ReactionSummaryResponse> summaries(Collection<Long> ids, List<Object[]> counts, List<Object[]> mine) {
         Map<Long, List<Object[]>> countsById = new HashMap<>();
         for (Object[] row : counts) {
             countsById.computeIfAbsent(((Number) row[0]).longValue(), k -> new ArrayList<>()).add(new Object[]{row[1], row[2]});
         }
         Map<Long, ClassReactionType> mineById = new HashMap<>();
         for (Object[] row : mine) mineById.put(((Number) row[0]).longValue(), (ClassReactionType) row[1]);
-        Map<Long, Map<String, Object>> out = new HashMap<>();
+        Map<Long, ReactionSummaryResponse> out = new HashMap<>();
         for (Long id : ids) out.put(id, summary(countsById.getOrDefault(id, List.of()), mineById.get(id)));
         return out;
     }
 
     /** rows of [reactionType, count] */
-    private static Map<String, Object> summary(List<Object[]> rows, ClassReactionType mine) {
+    private static ReactionSummaryResponse summary(List<Object[]> rows, ClassReactionType mine) {
         Map<ClassReactionType, Long> byType = new EnumMap<>(ClassReactionType.class);
         for (Object[] row : rows) {
             byType.put((ClassReactionType) row[0], ((Number) row[1]).longValue());
         }
-        List<Map<String, Object>> counts = new ArrayList<>();
+        List<ReactionCountResponse> counts = new ArrayList<>();
         long total = 0;
         for (Map.Entry<ClassReactionType, Long> e : byType.entrySet()) {   // enum order = stable output
-            Map<String, Object> c = new LinkedHashMap<>();
-            c.put("reaction_type", e.getKey().name());
-            c.put("count", e.getValue());
-            counts.add(c);
+            counts.add(new ReactionCountResponse(e.getKey().name(), e.getValue()));
             total += e.getValue();
         }
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("viewer_reaction", mine == null ? null : mine.name());
-        out.put("total_count", total);
-        out.put("counts", counts);
-        return out;
+        return new ReactionSummaryResponse(mine == null ? null : mine.name(), total, counts);
     }
 
-    private static Map<String, Object> reactor(User u, ClassReactionType type, java.time.LocalDateTime at) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("user_id", u.getUuid());
-        m.put("name", ClassJson.displayName(u));
-        m.put("avatar_url", u.getAvatarUrl());
-        m.put("reaction_type", type.name());
-        m.put("reacted_at", ClassJson.at(at));
-        return m;
+    private static ReactorResponse reactor(User u, ClassReactionType type, java.time.LocalDateTime at) {
+        return new ReactorResponse(u.getUuid(), ClassJson.displayName(u), u.getAvatarUrl(), type.name(), ClassJson.at(at));
     }
 }

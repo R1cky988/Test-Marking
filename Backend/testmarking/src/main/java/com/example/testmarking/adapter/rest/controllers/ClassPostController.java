@@ -1,6 +1,12 @@
 package com.example.testmarking.adapter.rest.controllers;
 
 import com.example.testmarking.adapter.persistance.security.SecurityUser;
+import com.example.testmarking.adapter.rest.dtos.request.CommentRequest;
+import com.example.testmarking.adapter.rest.dtos.request.CreatePostRequest;
+import com.example.testmarking.adapter.rest.dtos.request.UpdatePostRequest;
+import com.example.testmarking.adapter.rest.dtos.response.CommentResponse;
+import com.example.testmarking.adapter.rest.dtos.response.MessageResponse;
+import com.example.testmarking.adapter.rest.dtos.response.PostResponse;
 import com.example.testmarking.application.imp.ClassPostImp;
 import com.example.testmarking.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,13 +16,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-/** Stream of a class. Posts: teacher only. Comments: every member. */
+/** Stream of a class. Posts and comments: every member of the class; what each member may change is checked in the service. */
 @RestController
-@RequestMapping("/api/v1/web/classes/{classId}")
-@PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
+@RequestMapping("/api/v1/classes/{classId}")
+@PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ClassPostController {
 
@@ -27,59 +32,72 @@ public class ClassPostController {
     }
 
     @GetMapping("/posts")
-    public ApiResponse<List<Map<String, Object>>> feed(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId) {
+    public ApiResponse<List<PostResponse>> feed(@AuthenticationPrincipal SecurityUser me,
+                                                @PathVariable("classId") UUID classId) {
         return ok(service.feed(me.getUser(), classId));
     }
 
     @PostMapping("/posts")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<Map<String, Object>> createPost(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                       @RequestBody Map<String, Object> body) {
+    public ApiResponse<PostResponse> createPost(@AuthenticationPrincipal SecurityUser me,
+                                                @PathVariable("classId") UUID classId,
+                                                @RequestBody CreatePostRequest body) {
         return ok(service.createPost(me.getUser(), classId, body));
     }
 
     @PutMapping("/posts/{postId}")
-    public ApiResponse<Map<String, Object>> updatePost(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                       @PathVariable UUID postId, @RequestBody Map<String, Object> body) {
+    public ApiResponse<PostResponse> updatePost(@AuthenticationPrincipal SecurityUser me,
+                                                @PathVariable("classId") UUID classId,
+                                                @PathVariable("postId") UUID postId,
+                                                @RequestBody UpdatePostRequest body) {
         return ok(service.updatePost(me.getUser(), classId, postId, body));
     }
 
     @DeleteMapping("/posts/{postId}")
-    public ApiResponse<Map<String, String>> deletePost(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                       @PathVariable UUID postId) {
+    public ApiResponse<MessageResponse> deletePost(@AuthenticationPrincipal SecurityUser me,
+                                                   @PathVariable("classId") UUID classId,
+                                                   @PathVariable("postId") UUID postId) {
         service.deletePost(me.getUser(), classId, postId);
-        return ok(Map.of("message", "Đã xóa bài đăng"));
+        return ok(new MessageResponse("Đã xóa bài đăng"));
     }
 
     @PostMapping("/posts/{postId}/comments")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<Map<String, Object>> addComment(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                       @PathVariable UUID postId, @RequestBody Map<String, Object> body) {
+    public ApiResponse<CommentResponse> addComment(@AuthenticationPrincipal SecurityUser me,
+                                                   @PathVariable("classId") UUID classId,
+                                                   @PathVariable("postId") UUID postId,
+                                                   @RequestBody CommentRequest body) {
         return ok(service.addComment(me.getUser(), classId, postId, body));
     }
 
     @PutMapping("/comments/{commentId}")
-    public ApiResponse<Map<String, Object>> updateComment(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                          @PathVariable UUID commentId, @RequestBody Map<String, Object> body) {
+    public ApiResponse<CommentResponse> updateComment(@AuthenticationPrincipal SecurityUser me,
+                                                      @PathVariable("classId") UUID classId,
+                                                      @PathVariable("commentId") UUID commentId,
+                                                      @RequestBody CommentRequest body) {
         return ok(service.updateComment(me.getUser(), classId, commentId, body));
     }
 
     @DeleteMapping("/comments/{commentId}")
-    public ApiResponse<Map<String, String>> deleteComment(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                          @PathVariable UUID commentId) {
+    public ApiResponse<MessageResponse> deleteComment(@AuthenticationPrincipal SecurityUser me,
+                                                      @PathVariable("classId") UUID classId,
+                                                      @PathVariable("commentId") UUID commentId) {
         service.deleteComment(me.getUser(), classId, commentId);
-        return ok(Map.of("message", "Đã xóa bình luận"));
+        return ok(new MessageResponse("Đã xóa bình luận"));
     }
 
+    /** Teacher of the class only (checked in the service). */
     @PostMapping("/comments/{commentId}/hide")
-    public ApiResponse<Map<String, Object>> hideComment(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                        @PathVariable UUID commentId) {
+    public ApiResponse<CommentResponse> hideComment(@AuthenticationPrincipal SecurityUser me,
+                                                    @PathVariable("classId") UUID classId,
+                                                    @PathVariable("commentId") UUID commentId) {
         return ok(service.setCommentHidden(me.getUser(), classId, commentId, true));
     }
 
     @PostMapping("/comments/{commentId}/unhide")
-    public ApiResponse<Map<String, Object>> unhideComment(@AuthenticationPrincipal SecurityUser me, @PathVariable UUID classId,
-                                                          @PathVariable UUID commentId) {
+    public ApiResponse<CommentResponse> unhideComment(@AuthenticationPrincipal SecurityUser me,
+                                                      @PathVariable("classId") UUID classId,
+                                                      @PathVariable("commentId") UUID commentId) {
         return ok(service.setCommentHidden(me.getUser(), classId, commentId, false));
     }
 }

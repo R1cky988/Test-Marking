@@ -1,5 +1,6 @@
 package com.example.testmarking.adapter.persistance.adapters;
 
+import com.example.testmarking.adapter.persistance.repository.StudentRepository;
 import com.example.testmarking.adapter.persistance.repository.UserRepository;
 import com.example.testmarking.adapter.persistance.repository.VerificationCodeRepository;
 import com.example.testmarking.adapter.persistance.security.JwtService;
@@ -9,11 +10,14 @@ import com.example.testmarking.adapter.rest.dtos.request.UpdatePasswordRequest;
 import com.example.testmarking.adapter.rest.dtos.request.UpdateUserRequest;
 import com.example.testmarking.adapter.rest.dtos.response.AuthResponse;
 import com.example.testmarking.adapter.rest.dtos.response.UserResponse;
+import com.example.testmarking.common.component.AccountCodeGenerator;
+import com.example.testmarking.domain.entities.Student;
 import com.example.testmarking.domain.entities.User;
 import com.example.testmarking.domain.entities.VerificationCode;
 import com.example.testmarking.domain.entities.enums.Role;
 import com.example.testmarking.domain.entities.enums.UserStatus;
 import com.example.testmarking.domain.ports.UserPort;
+import com.example.testmarking.template.exception.TemplateException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,6 +39,8 @@ public class AuthAdapter implements UserPort {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final VerificationCodeRepository verificationCodeRepository;
+    private final StudentRepository studentRepository;
+    private final AccountCodeGenerator accountCodeGenerator;
     private final EmailAdapter emailService;
     private final JwtService jwtService;
 
@@ -45,6 +51,13 @@ public class AuthAdapter implements UserPort {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Email/Password không đúng"));
+
+        if(user.getStatus() == UserStatus.PENDING){
+            throw TemplateException.badRequestWithCode("UNVERIFIED_ACCOUNT", "Tài khoản chưa được xác nhận");
+        }
+        if(user.getStatus() == UserStatus.SUSPENSE){
+            throw TemplateException.badRequestWithCode("SUSPENDED_ACCOUNT", "Tài khoản đã bị cấm");
+        }
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -81,24 +94,34 @@ public class AuthAdapter implements UserPort {
         if (password == null || password.length() < 8) {
             throw new RuntimeException("Mật khẩu phải có ít nhất 8 ký tự");
         }
-        // only TEACHER or STUDENT can be chosen at sign-up; anything else becomes STUDENT
-        Role userRole = request.getRole() == Role.TEACHER ? Role.TEACHER : Role.STUDENT;
+        // Everybody registers as USER. Teacher / student is decided per class: whoever creates a class teaches it,
+        // whoever joins one is its student.
 
         String BASE_AVATAR = "base_avatar";
         User user = User.builder()
                 .uuid(UUID.randomUUID())
                 .email(request.getEmail())
                 .phoneNumber(request.getPhoneNumber())
-                .password(passwordEncoder.encode(password))   // was stored as plain text, so BCrypt login could never match
+                .password(passwordEncoder.encode(password))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .dob(request.getDob())
                 .gender(request.getGender())
+                .status(UserStatus.PENDING)
                 .avatarUrl(BASE_AVATAR)
-                .role(userRole)
+                .role(Role.USER)
                 .build();
 
         userRepository.save(user);
+        // ClassStudent points at a Student row, so every account gets one: it is what lets the user join classes.
+        Student student = Student.builder()
+                .uuid(user.getUuid())
+                .user(user)
+                .studentCode(accountCodeGenerator.generateStudentCode())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+        studentRepository.save(student);
         sendVerificationCode(user);
     }
 
