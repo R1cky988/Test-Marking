@@ -1,0 +1,25 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+.mathjax-content p {
+  margin: 0;
+}
+
+.mathjax-content mjx-container[jax="SVG"] {
+  display: inline-block;
+  margin: 0 0.08em;
+  vertical-align: middle;
+}
+
+.mathjax-content mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  margin: 0.35em 0;
+}
+
+.mathjax-content img {
+  display: inline-block;
+  max-width: min(100%, 420px);
+  height: auto;
+  vertical-align: middle;
+}
