@@ -19,6 +19,8 @@ public interface ClassStudentRepository extends JpaRepository<ClassStudent, Long
 
     long countByClassEntity_Id(Long classId);
 
+    void deleteByStudent_Id(Long studentId);
+
     /** Roster, with student and user loaded in one query. */
     @Query("select cs from ClassStudent cs join fetch cs.student s join fetch s.user "
             + "where cs.classEntity.id = :classId order by cs.joinedAt asc")

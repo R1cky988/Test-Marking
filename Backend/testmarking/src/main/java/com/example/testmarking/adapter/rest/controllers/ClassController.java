@@ -37,14 +37,15 @@ public class ClassController {
 
     // ─── class list ──────────────────────────────────────────────
 
-    /** My classes: created (my_role TEACHER) + joined (my_role STUDENT). Answer: { status, message, data: [...], meta: {page, limit, total} }. */
+    /** My classes: created (my_role TEACHER) + joined (my_role STUDENT); ?role=teacher|student narrows it. Answer: { status, message, data: [...], meta: {page, limit, total} }. */
     @GetMapping
     public ClassListResponse list(@AuthenticationPrincipal SecurityUser me,
                                   @RequestParam(name = "status", required = false) String status,
+                                  @RequestParam(name = "role", required = false) String role,
                                   @RequestParam(name = "search", required = false) String search,
                                   @RequestParam(name = "page", required = false) Integer page,
                                   @RequestParam(name = "limit", required = false) Integer limit) {
-        return listService.list(me.getUser(), status, search, page, limit);
+        return listService.list(me.getUser(), status, role, search, page, limit);
     }
 
     /** Anyone can create a class and becomes its teacher. */

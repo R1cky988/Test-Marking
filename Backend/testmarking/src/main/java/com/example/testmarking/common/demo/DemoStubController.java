@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * DEMO ONLY (demo.enabled=true). The ExamHub shell asks for notifications and a dashboard right after login; your Spring
+ * DEMO ONLY (demo.enabled=true). The ExamHub shell asks for a dashboard right after login; your Spring
  * backend has no such endpoints yet, so the app would show errors. These answers are empty/zero on purpose.
  * Delete this file when the real endpoints exist.
  */
@@ -28,13 +28,12 @@ public class DemoStubController {
 
     @GetMapping("/dashboard/summary")
     public ApiResponse<DashboardSummaryResponse> dashboard(@AuthenticationPrincipal SecurityUser me) {
-        long classCount = classes.findMine(me.getUser().getId(), 1, "", PageRequest.of(0, 1)).getTotalElements();
+        long classCount = classes.findMine(me.getUser().getId(), 0, 1, "", PageRequest.of(0, 1)).getTotalElements();
         DashboardSummaryResponse data = new DashboardSummaryResponse(
                 new DashboardStatsResponse(classCount, 0, 0, 0),
                 List.of(),
-                List.of(),
                 true,
-                List.of("Demo: exams and appeals are not connected to the Spring backend yet"));
+                List.of("Demo: exams are not connected to the Spring backend yet"));
         return ApiResponse.<DashboardSummaryResponse>builder().status(200).message("OK").data(data).build();
     }
 }

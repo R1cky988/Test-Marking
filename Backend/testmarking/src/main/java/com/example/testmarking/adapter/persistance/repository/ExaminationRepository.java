@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ExaminationRepository extends JpaRepository<Examination, Long> {
     List<Examination> findByClassEntity_IdOrderByFromTimeDesc(Long classId);
+
+    boolean existsByQuestionBank_Id(Long bankId);
 }

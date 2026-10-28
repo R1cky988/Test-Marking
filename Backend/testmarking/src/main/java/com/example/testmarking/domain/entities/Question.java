@@ -56,6 +56,10 @@ public class Question {
     @Builder.Default
     private QuestionType questionType = QuestionType.SINGLE;
 
+    /* Lời giải / giải thích, hiển thị sau khi chấm (có thể chứa LaTeX) */
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
+
     // Lưu nhãn đáp án đúng (VD: "A", "B" hoặc "A,C")
     @Column(name = "correct_answer", length = 50)
     private String correctAnswer;

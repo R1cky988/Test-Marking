@@ -42,15 +42,16 @@ public class ClassListImp {
 
     // ─── list ────────────────────────────────────────────────────
 
-    /** @param status active | archived | all (default all). A class I only joined disappears from the list once it is archived. */
+    /** @param status active | archived | all (default all). @param role teacher | student | all (default all). A class I only joined disappears from the list once it is archived. */
     @Transactional(readOnly = true)
-    public ClassListResponse list(User me, String status, String search, Integer page, Integer limit) {
+    public ClassListResponse list(User me, String status, String role, String search, Integer page, Integer limit) {
         int mode = archivedMode(status);
+        int roleMode = roleMode(role);
         int p = page == null || page < 1 ? 1 : page;
         int l = limit == null || limit < 1 ? 10 : Math.min(limit, MAX_LIMIT);
         String q = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
 
-        Page<Class> result = classes.findMine(me.getId(), mode, q, PageRequest.of(p - 1, l));
+        Page<Class> result = classes.findMine(me.getId(), roleMode, mode, q, PageRequest.of(p - 1, l));
 
         Map<Long, Long> counts = new HashMap<>();
         List<Long> ids = result.getContent().stream().map(Class::getId).collect(Collectors.toList());
@@ -62,6 +63,14 @@ public class ClassListImp {
             data.add(item(c, ClassAccessImp.isOwner(me, c), counts.getOrDefault(c.getId(), 0L)));
         }
         return new ClassListResponse(200, "OK", data, new ClassListMeta(p, l, result.getTotalElements()));
+    }
+
+    /** role = teacher (classes I created) | student (classes I joined) | all (default). */
+    private static int roleMode(String role) {
+        if (role == null || role.isBlank() || role.equalsIgnoreCase("all")) return 0;
+        if (role.equalsIgnoreCase("teacher")) return 1;
+        if (role.equalsIgnoreCase("student")) return 2;
+        throw TemplateException.badRequest("Dữ liệu không hợp lệ", "role: must be teacher, student or all");
     }
 
     private static int archivedMode(String status) {

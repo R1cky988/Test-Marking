@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record DashboardStatsResponse(
         @JsonProperty("class_count") long classCount,
         @JsonProperty("active_exam_count") int activeExamCount,
-        @JsonProperty("pending_close_exams") int pendingCloseExams,
-        @JsonProperty("pending_appeals") int pendingAppeals
+        @JsonProperty("upcoming_exam_count") int upcomingExamCount,
+        @JsonProperty("pending_close_exams") int pendingCloseExams
 ) {
 }

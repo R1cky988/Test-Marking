@@ -136,15 +136,8 @@ public class TestLayoutImp {
         }
 
         if (body.get("grid_config") != null) {
-            int currentZoneCount = readGridConfig(layout.getGridConfig()).answerZones().size();
-            Object zonesRaw = body.get("grid_config") instanceof Map<?, ?> g ? g.get("answer_zones") : null;
-            int nextZoneCount = zonesRaw instanceof List<?> l ? l.size() : 0;
-            if (currentZoneCount != nextZoneCount) {
-                throw TemplateException.badRequestWithCode("TEMPLATE_LAYOUT_LOCKED",
-                        "Không thể thay đổi layout của template. Vui lòng tạo template mới nếu cần đổi layout.",
-                        "current_zone_count=" + currentZoneCount, "next_zone_count=" + nextZoneCount);
-            }
-
+            // The sheet size (number of answer zones, e.g. 20 -> 40 answers) may change: assertNotUsed() above already
+            // guarantees that no exam uses this template, and checkDistribution() below validates the new layout.
             GridConfig grid = normalizer.normalize(body.get("grid_config"));
             List<AnchorPoint> anchors = body.get("anchor_points") != null
                     ? GridConfigNormalizer.parseAnchorPoints(body.get("anchor_points"))

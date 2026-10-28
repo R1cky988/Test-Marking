@@ -51,19 +51,20 @@ public interface ClassRepository extends JpaRepository<Class, Long> {
 
     /**
      * "My classes": the ones I created (I am their teacher) plus the ones I joined (I am a student there), newest first.
+     * roleMode: 0 = both, 1 = only classes I teach (created), 2 = only classes I study in (joined).
      * archivedMode as in findOwned; a class I only joined is never shown once it is archived.
      */
     @Query(value = "select c from Class c join fetch c.createdUser u where "
-            + "(u.id = :userId or (c.isArchived = false "
+            + "((:roleMode <> 2 and u.id = :userId) or (:roleMode <> 1 and c.isArchived = false "
             + "  and exists (select 1 from ClassStudent cs where cs.classEntity = c and cs.student.user.id = :userId))) "
             + "and (:archivedMode = 0 or (:archivedMode = 1 and c.isArchived = false) or (:archivedMode = 2 and c.isArchived = true)) "
             + "and (:search = '' or lower(c.name) like concat('%', :search, '%')) "
             + "order by c.createdAt desc, c.id desc",
             countQuery = "select count(c) from Class c where "
-                    + "(c.createdUser.id = :userId or (c.isArchived = false "
+                    + "((:roleMode <> 2 and c.createdUser.id = :userId) or (:roleMode <> 1 and c.isArchived = false "
                     + "  and exists (select 1 from ClassStudent cs where cs.classEntity = c and cs.student.user.id = :userId))) "
                     + "and (:archivedMode = 0 or (:archivedMode = 1 and c.isArchived = false) or (:archivedMode = 2 and c.isArchived = true)) "
                     + "and (:search = '' or lower(c.name) like concat('%', :search, '%'))")
-    Page<Class> findMine(@Param("userId") Long userId, @Param("archivedMode") int archivedMode,
+    Page<Class> findMine(@Param("userId") Long userId, @Param("roleMode") int roleMode, @Param("archivedMode") int archivedMode,
                          @Param("search") String search, Pageable pageable);
 }
