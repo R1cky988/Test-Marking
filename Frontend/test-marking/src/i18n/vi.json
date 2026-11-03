@@ -13,7 +13,7 @@
     "search": {
       "button": "Tìm kiếm",
       "title": "Bảng lệnh",
-      "description": "Di chuyển nhanh trong TestMarking",
+      "description": "Di chuyển nhanh trong ExamHub",
       "placeholder": "Tìm trang...",
       "noResults": "Không tìm thấy kết quả.",
       "navigation": "Điều hướng",
@@ -89,8 +89,8 @@
     "updatePassword": "Cập nhật mật khẩu",
     "passwordRequired": "Vui lòng nhập đầy đủ thông tin mật khẩu",
     "passwordMismatch": "Mật khẩu mới và xác nhận mật khẩu không khớp",
-    "passwordTooShort": "Mật khẩu mới phải có ít nhất 8 ký tự (Trong đó có 1 số và 1 chữ cái)",
-    "passwordHint": "Mật khẩu mới phải có ít nhất 8 ký tự. (Trong đó có 1 số và 1 chữ cái)",
+    "passwordTooShort": "Mật khẩu mới phải có ít nhất 6 ký tự",
+    "passwordHint": "Mật khẩu mới phải có ít nhất 6 ký tự.",
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
     "passwordNotSet": "Tài khoản chưa có mật khẩu",
@@ -1199,7 +1199,7 @@
     "search": {
       "button": "Tìm kiếm",
       "title": "Bảng lệnh",
-      "description": "Di chuyển nhanh trong TestMarking",
+      "description": "Di chuyển nhanh trong ExamHub",
       "placeholder": "Tìm trang...",
       "noResults": "Không tìm thấy kết quả.",
       "navigation": "Điều hướng",
@@ -1216,7 +1216,7 @@
     "logoutConfirm": "Bạn có chắc chắn muốn đăng xuất?"
   },
   "authLayout": {
-    "appTitle": "TestMarking",
+    "appTitle": "ExamHub",
     "appSubtitle": "Cổng làm việc cho giáo viên",
     "audience": "Dành cho giáo viên",
     "headingPrefix": "Quản lý bài kiểm tra",
@@ -1240,7 +1240,7 @@
         "desc": "Biết khi có bài nộp mới hoặc có vấn đề trong lúc học sinh làm bài"
       }
     },
-    "copyright": "TestMarking Teacher Portal. All rights reserved."
+    "copyright": "ExamHub Teacher Portal. All rights reserved."
   },
   "classesPage": {
     "title": "Quản lý lớp học",

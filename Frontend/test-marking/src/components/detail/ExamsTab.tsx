@@ -47,7 +47,7 @@ export function ExamsTab({ classId, isTeacher }: { classId: string; isTeacher: b
   const groups = query.data!;
   const open = (e: ClassExamItem) => {
     // teachers manage the exam; students have no exam-detail page in this app yet
-    if (isTeacher) navigate(e.bucket === "ended" ? `/exams/${e.id}/results` : `/exams/${e.id}/info`);
+    if (isTeacher) navigate(`/exams/${e.id}`);
   };
   const visible = SECTIONS.filter((s) => !s.teacherOnly || isTeacher);
   const total = visible.reduce((n, s) => n + (groups[s.key]?.length ?? 0), 0);

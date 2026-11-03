@@ -41,22 +41,16 @@ const loadAccountSettingsPage = () =>
   import("@/features/settings/pages/AccountSettingsPage").then((m) => ({ Component: m.AccountSettingsPage }));
 
 // Exam detail – layout + tabs
-const loadExamDetailLayout = () =>
-  import("@/features/exams/pages/ExamDetailLayout").then((m) => ({ Component: m.ExamDetailLayout }));
-const loadExamInfoTab = () =>
-  import("@/features/exams/pages/ExamInfoTab").then((m) => ({ Component: m.ExamInfoTab }));
+const loadExamDetailPage = () =>
+  import("@/features/exams/pages/ExamDetailPage").then((m) => ({ Component: m.ExamDetailPage }));
+const loadExamExportPage = () =>
+  import("@/features/exams/pages/ExamExportPage").then((m) => ({ Component: m.ExamExportPage }));
+const loadExamPrintPage = () =>
+  import("@/features/exams/pages/ExamPrintPage").then((m) => ({ Component: m.ExamPrintPage }));
 const loadExamFormPage = () =>
   import("@/features/exams/pages/ExamFormPage").then((m) => ({ Component: m.ExamFormPage }));
-const loadResultsTab = () =>
-  import("@/features/grading/pages/ResultsPage").then((m) => ({ Component: m.ResultsPage }));
 const loadResultDetailPage = () =>
   import("@/features/grading/pages/ResultDetailPage").then((m) => ({ Component: m.ResultDetailPage }));
-const loadStatisticsTab = () =>
-  import("@/features/statistics/pages/StatisticsPage").then((m) => ({ Component: m.StatisticsPage }));
-const loadViolationsTab = () =>
-  import("@/features/exams/pages/ExamViolationsTab").then((m) => ({ Component: m.ExamViolationsTab }));
-const loadParticipantsTab = () =>
-  import("@/features/exams/pages/ExamParticipantsTab").then((m) => ({ Component: m.ExamParticipantsTab }));
 
 // ─── Redirect helpers ───────────────────────────────────────────────
 
@@ -105,6 +99,9 @@ export const router = createBrowserRouter([
     Component: ProtectedRoute,
     hydrateFallbackElement,
     children: [
+      // A4 print sheet: full page, no sidebar
+      { path: "/exams/:id/print", lazy: loadExamPrintPage },
+      { path: "/exams/:id/export", lazy: loadExamExportPage },
       {
         Component: RootLayout,
         hydrateFallbackElement,
@@ -120,23 +117,8 @@ export const router = createBrowserRouter([
           // Edit exam (độc lập, không trong tab layout)
           { path: "/exams/:id/edit", lazy: loadExamFormPage },
 
-          // ── Exam detail layout với nested tabs ──────────────────
-          {
-            path: "/exams/:id",
-            lazy: loadExamDetailLayout,
-            children: [
-              // Index → tab Thông tin
-              { index: true, element: <Navigate to="info" replace /> },
-              // Tab "Thông tin" – read-only overview
-              { path: "info", lazy: loadExamInfoTab },
-              { path: "participants", lazy: loadParticipantsTab },
-              // Tab "Kết quả"
-              { path: "results", lazy: loadResultsTab },
-              // Tab "Thống kê"
-              { path: "statistics", lazy: loadStatisticsTab },
-              { path: "violations", lazy: loadViolationsTab },
-            ],
-          },
+          // Exam detail (info + versions); legacy participants/results/statistics tabs are not migrated yet
+          { path: "/exams/:id", lazy: loadExamDetailPage },
 
           // Chi tiết bài làm (không thuộc tab layout)
           { path: "/exams/:id/results/:sheetId", lazy: loadResultDetailPage },

@@ -77,6 +77,18 @@ const DEFAULT_ID_ZONE_ITEMS: OmrIdZoneItem[] = [
   { type: "exam_code", enabled: true, num_digits: 3 },
 ];
 
+/** Student codes are HSxxxxxxxx and exam codes use 3 cells: both are fixed, always on. */
+const FIXED_ID_DIGITS: Record<string, number> = { student_id: 8, exam_code: 3 };
+
+function lockIdZoneItems(items: OmrIdZoneItem[]): OmrIdZoneItem[] {
+  const byType = new Map(items.map((item) => [item.type, item]));
+  return DEFAULT_ID_ZONE_ITEMS.map((def) => {
+    const fixed = FIXED_ID_DIGITS[def.type];
+    const current = byType.get(def.type) ?? def;
+    return fixed ? { ...current, enabled: true, num_digits: fixed } : current;
+  });
+}
+
 interface AnswerGridCell {
   type: "question_number" | "choice";
   questionNumber: number;
@@ -675,7 +687,7 @@ export function OMRTemplateDesigner({
         }
         setActiveZone(0);
         setFixedZoneItems(normalizeFixedZoneItems(template.grid_config.fixed_zones));
-        setIdZoneItems(template.grid_config.id_zones?.items?.length ? template.grid_config.id_zones.items : [...DEFAULT_ID_ZONE_ITEMS]);
+        setIdZoneItems(lockIdZoneItems(template.grid_config.id_zones?.items?.length ? template.grid_config.id_zones.items : [...DEFAULT_ID_ZONE_ITEMS]));
         setZones((current) =>
           current.map((zone, index) => {
             const answerZone = template.grid_config.answer_zones[index];
@@ -722,8 +734,10 @@ export function OMRTemplateDesigner({
 
   function updateIdZoneItem(index: number, patch: Partial<OmrIdZoneItem>) {
     setIdZoneItems((current) =>
-      current.map((item, currentIndex) =>
-        currentIndex === index ? { ...item, ...patch } : item,
+      lockIdZoneItems(
+        current.map((item, currentIndex) =>
+          currentIndex === index ? { ...item, ...patch } : item,
+        ),
       ),
     );
   }
@@ -1087,15 +1101,27 @@ export function OMRTemplateDesigner({
                                 ? t("omr.classCode")
                                 : t("omr.examCode");
 
+                          const locked = item.type in FIXED_ID_DIGITS;
+
                           return (
                             <div key={item.type} className="rounded-md border p-3">
                               <div className="flex items-center justify-between gap-3">
                                 <Label className="text-sm font-medium">{label}</Label>
                                 <Switch
                                   checked={item.enabled}
+                                  disabled={locked}
                                   onCheckedChange={(checked) => updateIdZoneItem(idx, { enabled: checked })}
                                 />
                               </div>
+                              {locked && (
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                  {t("omr.idFixedHint", {
+                                    defaultValue: item.type === "student_id"
+                                      ? "Cố định 8 chữ số (mã học sinh dạng HSxxxxxxxx)."
+                                      : "Cố định 3 ô cho mã đề.",
+                                  })}
+                                </p>
+                              )}
                               <div className="mt-3 space-y-2">
                                 <Label className="text-xs text-muted-foreground">{t("omr.digitsLabel")}</Label>
                                 <Input
@@ -1103,8 +1129,9 @@ export function OMRTemplateDesigner({
                                   min={1}
                                   max={10}
                                   value={item.num_digits}
-                                  disabled={!item.enabled}
+                                  disabled={!item.enabled || locked}
                                   onChange={(event) => {
+                                    if (locked) return;
                                     const value = Number.parseInt(event.target.value, 10) || 1;
                                     updateIdZoneItem(idx, { num_digits: Math.max(1, Math.min(10, value)) });
                                   }}

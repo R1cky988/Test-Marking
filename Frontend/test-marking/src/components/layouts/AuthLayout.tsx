@@ -129,7 +129,7 @@ export function AuthLayout() {
               <ScanLine className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-lg font-semibold leading-none text-white">TestMarking</p>
+              <p className="text-lg font-semibold leading-none text-white">ExamHub</p>
               <p className="mt-0.5 text-xs text-white/55">
                 {t('authLayout.appSubtitle')}
               </p>
@@ -275,7 +275,7 @@ export function AuthLayout() {
       <div className="flex min-h-dvh lg:min-h-0 lg:h-full flex-1 flex-col items-center justify-center overflow-y-auto bg-[linear-gradient(180deg,var(--background),var(--surface-soft))] p-6 dark:bg-[linear-gradient(180deg,#0B1220,#111827)] sm:p-10">
         <div className="mb-8 flex items-center gap-2 lg:hidden">
           <ScanLine className="h-6 w-6 text-primary" />
-          <span className="font-semibold text-foreground">TestMarking</span>
+          <span className="font-semibold text-foreground">ExamHub</span>
         </div>
 
         <div className="w-full max-w-md animate-in fade-in-0 slide-in-from-bottom-4 rounded-xl border border-border/70 bg-card/95 p-6 shadow-[var(--shadow-floating)] backdrop-blur transition-[opacity,transform] duration-500 dark:border-white/[0.08] dark:bg-[#111827]/95 sm:p-8">

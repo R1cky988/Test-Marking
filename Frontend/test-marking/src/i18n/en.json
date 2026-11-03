@@ -13,7 +13,7 @@
     "search": {
       "button": "Search",
       "title": "Command palette",
-      "description": "Navigate through TestMarking",
+      "description": "Navigate through ExamHub",
       "placeholder": "Search pages...",
       "noResults": "No results found.",
       "navigation": "Navigation",
@@ -89,8 +89,8 @@
     "updatePassword": "Update password",
     "passwordRequired": "Please enter all password fields",
     "passwordMismatch": "New password and confirmation do not match",
-    "passwordTooShort": "The new password must contain at least 8 characters (including at least one number and one letter).",
-    "passwordHint": "The new password must contain at least 8 characters (including at least one number and one letter).",
+    "passwordTooShort": "The new password must contain at least 6 characters",
+    "passwordHint": "The new password must contain at least 6 characters.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "passwordNotSet": "No password has been set",
@@ -1199,7 +1199,7 @@
     "search": {
       "button": "Search",
       "title": "Command palette",
-      "description": "Navigate through TestMarking",
+      "description": "Navigate through ExamHub",
       "placeholder": "Search pages...",
       "noResults": "No results found.",
       "navigation": "Navigation",
@@ -1216,7 +1216,7 @@
     "logoutConfirm": "Are you sure you want to sign out?"
   },
   "authLayout": {
-    "appTitle": "TestMarking",
+    "appTitle": "ExamHub",
     "appSubtitle": "Workspace for teachers",
     "audience": "For teachers",
     "headingPrefix": "Manage tests",
@@ -1240,7 +1240,7 @@
         "desc": "Know when students submit work or when something needs attention"
       }
     },
-    "copyright": "TestMarking Teacher Portal. All rights reserved."
+    "copyright": "ExamHub Teacher Portal. All rights reserved."
   },
   "classesPage": {
     "title": "Class management",

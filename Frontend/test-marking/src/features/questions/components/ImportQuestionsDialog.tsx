@@ -60,7 +60,7 @@ export function ImportQuestionsDialog({ bankId, open, onOpenChange }: { bankId: 
         <DialogHeader>
           <DialogTitle>{t("qb.import.title", "Nhập câu hỏi từ Excel")}</DialogTitle>
           <DialogDescription>
-            {t("qb.import.desc", "Cột bắt buộc: Nội dung câu hỏi, ít nhất 2 đáp án (A–F) và Đáp án đúng. Nhiều đáp án đúng viết cách nhau bằng dấu phẩy (B,C). Có thể viết LaTeX trong mọi ô.")}
+            {t("qb.import.desc", "Cột bắt buộc: Nội dung câu hỏi, ít nhất 2 đáp án (A–E) và Đáp án đúng. Nhiều đáp án đúng viết cách nhau bằng dấu phẩy (B,C). Có thể viết LaTeX trong mọi ô.")}
           </DialogDescription>
         </DialogHeader>
 
