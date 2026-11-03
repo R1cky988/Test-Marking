@@ -38,6 +38,10 @@ public class TemplateException extends RuntimeException {
         return new TemplateException(Kind.FORBIDDEN, "FORBIDDEN", message, List.of());
     }
 
+    public static TemplateException forbiddenWithCode(String code, String message) {
+        return new TemplateException(Kind.FORBIDDEN, code, message, List.of());
+    }
+
     public Kind getKind() { return kind; }
     public String getCode() { return code; }
     public List<String> getDetails() { return details; }

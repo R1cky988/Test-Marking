@@ -85,6 +85,7 @@ public class TestLayoutImp {
         List<AnchorPoint> anchors = GridConfigNormalizer.parseAnchorPoints(body.get("anchor_points"));
         grid = finalizeGrid(grid, anchors);
         checkDistribution(grid);
+        requireFixedIdZone(grid);
 
         TestLayout layout = TestLayout.builder()
                 .createdUser(teacher)
@@ -144,6 +145,7 @@ public class TestLayoutImp {
                     : grid.anchorPoints();
             grid = finalizeGrid(grid, anchors);
             checkDistribution(grid);
+            requireFixedIdZone(grid);
 
             layout.setGridConfig(Json.write(grid));
             layout.setAnchorPoints(Json.write(anchors));
@@ -245,6 +247,26 @@ public class TestLayoutImp {
         GridConfig result = new GridConfig(anchors, grid.fixedZones(), grid.idZones(), grid.numberZones(), zones);
         calc.validateGridConfig(result);
         return result;
+    }
+
+    /** Student codes are HSxxxxxxxx and exam codes have 3 digits: both are fixed on every sheet. */
+    static final int STUDENT_ID_DIGITS = 8;
+    static final int EXAM_CODE_DIGITS = 3;
+
+    static void requireFixedIdZone(GridConfig grid) {
+        var zone = grid.idZones();
+        boolean student = false, exam = false;
+        if (zone != null && zone.items() != null) {
+            for (var item : zone.items()) {
+                if ("student_id".equals(item.type()) && item.enabled() && item.numDigits() == STUDENT_ID_DIGITS) student = true;
+                if ("exam_code".equals(item.type()) && item.enabled() && item.numDigits() == EXAM_CODE_DIGITS) exam = true;
+            }
+        }
+        if (!student || !exam) {
+            throw TemplateException.badRequestWithCode("TEMPLATE_ID_FIXED",
+                    "Mã học sinh phải đủ " + STUDENT_ID_DIGITS + " chữ số và mã đề phải đủ " + EXAM_CODE_DIGITS + " ô (cố định, luôn bật).",
+                    "student_id=" + STUDENT_ID_DIGITS, "exam_code=" + EXAM_CODE_DIGITS);
+        }
     }
 
     private void checkDistribution(GridConfig grid) {

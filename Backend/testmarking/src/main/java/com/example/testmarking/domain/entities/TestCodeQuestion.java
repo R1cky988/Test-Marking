@@ -2,6 +2,8 @@ package com.example.testmarking.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "test_code_questions", uniqueConstraints = {
@@ -29,6 +31,7 @@ public class TestCodeQuestion {
     @Column(name = "question_order", nullable = false)
     private Integer questionOrder;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "answer_key_mapping", columnDefinition = "jsonb")
     private String answerKeyMapping;
 
