@@ -83,6 +83,10 @@ public class Examination {
     @Column(name = "number_of_hard_questions", nullable = false)
     private Integer numberOfHardQuestions = 0;
 
+    /** ONLINE only: show the student his result right after he submits (default true). Always false for OFFLINE and SUBMIT. */
+    @Column(name = "show_result_immediately", nullable = false, columnDefinition = "boolean default true")
+    private Boolean showResultImmediately = true;
+
     // Cờ kiểm soát công bố điểm (Examxy policy)
     @Column(name = "is_score_published", nullable = false)
     private Boolean isScorePublished = false;
@@ -110,6 +114,9 @@ public class Examination {
         }
         if (this.isScorePublished == null) {
             this.isScorePublished = false;
+        }
+        if (this.showResultImmediately == null) {
+            this.showResultImmediately = true;
         }
     }
 

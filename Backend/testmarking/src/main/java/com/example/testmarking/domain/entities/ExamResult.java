@@ -53,7 +53,7 @@ public class ExamResult {
     @Column(name = "is_latest", nullable = false)
     private Boolean isLatest = true;
 
-    @Column(name = "total_score", precision = 4, scale = 2)
+    @Column(name = "total_score", precision = 5, scale = 2)
     private BigDecimal totalScore;
 
     @Column(name = "total_correct")
@@ -82,6 +82,17 @@ public class ExamResult {
     @Column(name = "image_marked_rust_key", length = 500)
     private String imageMarkedRustKey;
 
+    /** The student broke the exam rules: the paper counts for 0 points, as if he had chosen nothing. The teacher can undo it. */
+    @Builder.Default
+    @Column(name = "is_violation", nullable = false, columnDefinition = "boolean default false")
+    private Boolean violation = false;
+
+    @Column(name = "violation_reason", length = 500)
+    private String violationReason;
+
+    @Column(name = "violation_at")
+    private OffsetDateTime violationAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -105,6 +116,9 @@ public class ExamResult {
         }
         if (this.isLatest == null) {
             this.isLatest = true;
+        }
+        if (this.violation == null) {
+            this.violation = false;
         }
     }
 
