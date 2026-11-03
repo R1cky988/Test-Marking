@@ -48,4 +48,8 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     List<Object[]> countByBankAndDifficulty(@Param("bankIds") List<Long> bankIds);
 
     List<Question> findByQuestionBank_Id(Long bankId);
+
+    /** Ids of the questions of one difficulty (the exam generator draws from them at random). */
+    @Query("select q.id from Question q where q.questionBank.id = :bankId and q.difficulty = :difficulty")
+    List<Long> findIdsByDifficulty(@Param("bankId") Long bankId, @Param("difficulty") QuestionDifficulty difficulty);
 }
