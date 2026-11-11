@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/classesTeachingFragment"
+        android:icon="@drawable/ic_teach"
+        android:title="@string/tab_teaching" />
+    <item
+        android:id="@+id/classesLearningFragment"
+        android:icon="@drawable/ic_school"
+        android:title="@string/tab_learning" />
+    <item
+        android:id="@+id/profileFragment"
+        android:icon="@drawable/ic_person"
+        android:title="@string/tab_profile" />
+</menu>

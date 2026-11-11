@@ -1,9 +1,26 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.TestMarking" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TestMarking" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_soft</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_soft</item>
+        <item name="colorSecondaryContainer">@color/primary_soft</item>
+        <item name="colorOnSecondaryContainer">@color/on_primary_soft</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_soft</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/border</item>
+        <item name="colorError">@color/danger</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="materialButtonStyle">@style/TM.Button.Primary</item>
+        <item name="textInputStyle">@style/TM.TextInput</item>
     </style>
 
-    <style name="Theme.TestMarking" parent="Base.Theme.TestMarking" />
+    <!-- Draws behind the status bar until the first frame (no white flash). -->
+    <style name="Theme.TestMarking.Splash" parent="Theme.TestMarking" />
 </resources>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- take an online exam -->
+    <string name="take_title">Làm bài thi</string>
+    <string name="take_start">Bắt đầu làm bài</string>
+    <string name="take_resume">Tiếp tục làm bài</string>
+    <string name="take_prev">Câu trước</string>
+    <string name="take_next">Câu tiếp theo</string>
+    <string name="take_submit">Nộp bài</string>
+    <string name="take_question_no">Câu %1$d / %2$d</string>
+    <string name="take_hint_single">Chọn một đáp án</string>
+    <string name="take_hint_multiple">Chọn một hoặc nhiều đáp án</string>
+    <string name="take_hint_forward_only">Chỉ làm tiếp về phía trước, không quay lại câu trước được.</string>
+    <string name="take_meta">%1$s · %2$d phút</string>
+    <string name="take_rules_reference">• Được tra cứu tài liệu: thoát khỏi màn hình làm bài không bị ghi vi phạm.\n• Thời gian làm tự do, có thể đổi câu trước sau.</string>
+    <string name="take_rules_closed">• Không được tra cứu tài liệu.\n• Câu hỏi chỉ đi tiếp, không quay lại; mỗi câu có thời gian riêng, hết giờ sẽ tự sang câu tiếp.\n• Đừng thoát khỏi màn hình làm bài: mỗi lần thoát đều được ghi lại.</string>
+    <string name="take_rules_flag">• Nếu thoát khỏi màn hình làm bài, bạn vẫn làm tiếp được nhưng bài bị báo cho giáo viên; giáo viên quyết định tính 0 điểm hay trừ điểm.</string>
+    <string name="take_rules_lock">• Nếu thoát khỏi màn hình làm bài, bài thi bị khóa cho đến khi giáo viên mở khóa.</string>
+    <string name="take_rules_offline">• Mất mạng không sao: bạn vẫn làm tiếp, đáp án lưu trên máy và tự gửi lên khi có mạng. Điểm chỉ có sau khi bài được gửi lên.</string>
+    <string name="take_offline_notice">Không có mạng. Bài vẫn được lưu trên máy và sẽ tự gửi khi có mạng.</string>
+    <string name="take_confirm_submit_title">Nộp bài?</string>
+    <string name="take_confirm_submit_body">Bạn còn %1$d câu chưa chọn đáp án. Sau khi nộp không sửa được.</string>
+    <string name="take_confirm_submit_all">Sau khi nộp không sửa được.</string>
+    <string name="take_keep_going">Làm tiếp</string>
+
+    <string name="take_locked_title">Bài thi đang bị khóa</string>
+    <string name="take_locked_body">%1$s.\nHãy báo giáo viên để được mở khóa; màn hình sẽ tự mở khi giáo viên mở khóa.</string>
+    <string name="take_waiting_title">Đã lưu bài làm</string>
+    <string name="take_waiting_body">Bài của bạn đã lưu trên máy và sẽ tự gửi lên hệ thống khi có mạng. Giữ ứng dụng trên máy, đừng gỡ cài đặt.</string>
+    <string name="take_waiting_locked">Bài bị khóa do thoát màn hình làm bài. Giáo viên cần mở khóa trước khi bài được chấm.</string>
+    <string name="take_sync_now">Gửi ngay</string>
+    <string name="take_done_title">Đã nộp bài</string>
+    <string name="take_done_synced">Hệ thống nhận bài lúc %1$s.</string>
+    <string name="take_done_not_released">Điểm sẽ hiển thị khi giáo viên công bố kết quả.</string>
+    <string name="take_done_score">Điểm: %1$s / %2$s\nĐúng %3$d / %4$d câu</string>
+    <string name="take_done_violation">Bài bị ghi vi phạm: %1$s. Điểm tính là 0.</string>
+    <string name="take_sync_error">Máy chủ từ chối bài: %1$s</string>
+    <string name="take_back_title">Đang làm bài</string>
+    <string name="take_back_body">Rời khỏi màn hình làm bài sẽ bị ghi lại. Bạn muốn nộp bài ngay không?</string>
+
+    <!-- teacher: exam detail -->
+    <string name="manage_title">Chi tiết kỳ thi</string>
+    <string name="manage_unlock">Mở khóa</string>
+    <string name="manage_empty">Lớp chưa có học sinh nào</string>
+    <string name="manage_info">%1$s · %2$s – %3$s</string>
+    <string name="manage_status_not_started">Chưa làm</string>
+    <string name="manage_status_in_progress">Đang làm</string>
+    <string name="manage_status_locked">Bị khóa</string>
+    <string name="manage_status_submitted">Đã nộp</string>
+    <string name="manage_status_violation">Vi phạm</string>
+    <string name="manage_status_none">Chưa nộp</string>
+    <string name="manage_line_left">Thoát màn hình: %1$d lần</string>
+    <string name="manage_line_graded">Chấm lúc: %1$s</string>
+    <string name="manage_line_synced">Đồng bộ lúc: %1$s</string>
+    <string name="manage_line_submitted">Nộp lúc: %1$s</string>
+    <string name="manage_line_score">Điểm: %1$s</string>
+    <string name="manage_line_code">Mã HS: %1$s</string>
+    <string name="manage_status_flagged">Chờ quyết định</string>
+    <string name="manage_decide">Quyết định</string>
+    <string name="manage_decide_title">Bài của %1$s bị báo vi phạm</string>
+    <string name="manage_decide_zero">Tính 0 điểm</string>
+    <string name="manage_decide_deduct">Trừ điểm</string>
+    <string name="manage_decide_dismiss">Bỏ qua, không xử lý</string>
+    <string name="manage_penalty_hint">Số điểm bị trừ</string>
+    <string name="manage_penalty_invalid">Số điểm trừ phải lớn hơn 0</string>
+    <string name="manage_line_flag">Báo vi phạm: %1$s</string>
+    <string name="manage_flag_pending">Giáo viên chưa quyết định; học sinh chưa thấy điểm</string>
+    <string name="manage_flag_zero">Đã quyết định: tính 0 điểm</string>
+    <string name="manage_flag_deduct">Đã quyết định: trừ %1$s điểm</string>
+    <string name="manage_flag_dismiss">Đã quyết định: không xử lý</string>
+    <string name="take_done_pending_review">Giáo viên đang xem xét bài của bạn. Điểm sẽ hiển thị sau khi giáo viên quyết định.</string>
+</resources>

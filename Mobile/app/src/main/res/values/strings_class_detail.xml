@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_posts">Bài đăng</string>
+    <string name="tab_exams">Kỳ thi</string>
+    <string name="tab_members">Thành viên</string>
+    <string name="tab_info">Thông tin</string>
+
+    <string name="time_just_now">Vừa xong</string>
+    <string name="time_minutes_ago">%1$d phút trước</string>
+    <string name="time_hours_ago">%1$d giờ trước</string>
+    <string name="time_days_ago">%1$d ngày trước</string>
+
+    <string name="post_new">Đăng bài</string>
+    <string name="post_new_title">Bài đăng mới</string>
+    <string name="post_field_title">Tiêu đề (không bắt buộc)</string>
+    <string name="post_field_content">Bạn muốn chia sẻ điều gì với lớp?</string>
+    <string name="post_announcement_switch">Đăng dưới dạng thông báo</string>
+    <string name="post_publish">Đăng</string>
+    <string name="post_badge_announcement">Thông báo</string>
+    <string name="post_badge_pinned">Đã ghim</string>
+    <string name="post_badge_draft">Nháp</string>
+    <string name="post_badge_closed">Đã đóng</string>
+    <string name="post_attachments">%1$d tệp đính kèm</string>
+    <string name="post_delete_title">Xóa bài đăng?</string>
+    <string name="post_delete_message">Bài đăng và các bình luận của nó sẽ bị xóa.</string>
+    <string name="post_delete">Xóa</string>
+    <string name="post_empty">Lớp chưa có bài đăng nào</string>
+    <string name="post_empty_hint">Bấm “Đăng bài” để chia sẻ với cả lớp.</string>
+
+    <string name="comments_title">Bình luận (%1$d)</string>
+    <string name="comments_hint">Viết bình luận…</string>
+    <string name="comments_empty">Chưa có bình luận nào</string>
+    <string name="comments_closed">Bài đăng này đã tắt bình luận</string>
+    <string name="comments_reply">Trả lời</string>
+    <string name="comments_replying">Đang trả lời %1$s</string>
+    <string name="comments_delete_title">Xóa bình luận?</string>
+
+    <string name="members_requests">Yêu cầu tham gia</string>
+    <string name="members_teachers">Giáo viên</string>
+    <string name="members_students">Học sinh</string>
+    <string name="members_empty">Lớp chưa có thành viên</string>
+    <string name="members_approve">Duyệt</string>
+    <string name="members_reject">Từ chối</string>
+    <string name="members_reject_title">Từ chối yêu cầu của %1$s?</string>
+    <string name="members_remove_title">Xóa %1$s khỏi lớp?</string>
+    <string name="members_remove_message">Học sinh sẽ không còn thấy lớp này nữa.</string>
+    <string name="members_remove">Xóa khỏi lớp</string>
+    <string name="members_student_code">Mã HS: %1$s</string>
+
+    <string name="exams_section_ongoing">Đang diễn ra</string>
+    <string name="exams_section_upcoming">Sắp diễn ra</string>
+    <string name="exams_section_ended">Đã kết thúc</string>
+    <string name="exams_section_draft">Bản nháp</string>
+    <string name="exams_empty">Lớp chưa có kỳ thi nào</string>
+    <string name="exams_from">Bắt đầu: %1$s</string>
+    <string name="exams_to">Kết thúc: %1$s</string>
+    <string name="exams_duration">Thời gian làm bài: %1$d phút</string>
+    <string name="exams_published">Đã công bố điểm</string>
+    <string name="exams_not_published">Chưa công bố điểm</string>
+
+    <string name="format_online">Thi online trên điện thoại</string>
+    <string name="format_offline">Thi giấy, giáo viên chấm</string>
+    <string name="format_submit">Làm giấy, chụp phiếu để nộp</string>
+    <string name="format_unknown">—</string>
+
+    <string name="status_draft">Nháp</string>
+    <string name="status_upcoming">Sắp diễn ra</string>
+    <string name="status_ongoing">Đang diễn ra</string>
+    <string name="status_completed">Đã kết thúc</string>
+    <string name="status_cancelled">Đã hủy</string>
+</resources>

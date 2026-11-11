@@ -1,21 +1,11 @@
-# Gradle build outputs & cache
-.gradle/
-**/build/
-**/build-cache/
-/captures
-
-# IDE files (Android Studio / IntelliJ)
-.idea/
 *.iml
+.gradle/
+/local.properties
+/.idea/
 .DS_Store
-
-# Local configuration & secrets
-local.properties
-
-# C/C++ / NDK build files
+/build/
+/captures/
 .externalNativeBuild/
 .cxx/
 
-# Generated SDK / Tooling settings
-.navigation/
-*.element
+/opencv/
