@@ -20,7 +20,7 @@ import { FORMAT_ICON, useFormatText, useResultText } from "../components/examMet
 import { VersionGenerator } from "../components/VersionGenerator";
 import {
   createExam, EXAM_FORMATS, formatNeedsTemplate, generateVersions, getExam, getVersions, publishExam, templateQuestionTotal, updateExam,
-  type Exam, type ExamFormat, type ExamPayload, type ExamVersion, type GenerateVersionsPayload,
+  type Exam, type ExamFormat, type ExamPayload, type ExamVersion, type LeavePolicy, type GenerateVersionsPayload,
 } from "../examsSpring.api";
 
 interface FormState {
@@ -32,11 +32,13 @@ interface FormState {
   to: string;
   duration: string;
   showResult: boolean;
+  allowReference: boolean;
+  leavePolicy: LeavePolicy;
   templateId: string;
   bankId: string;
 }
 
-const EMPTY: FormState = { name: "", subject: "", classId: "", format: "OFFLINE", from: "", to: "", duration: "", showResult: true, templateId: "", bankId: "" };
+const EMPTY: FormState = { name: "", subject: "", classId: "", format: "OFFLINE", from: "", to: "", duration: "", showResult: true, allowReference: false, leavePolicy: "FLAG", templateId: "", bankId: "" };
 
 const toLocalInput = (iso: string | null) => {
   if (!iso) return "";
@@ -75,7 +77,7 @@ export function ExamFormPage() {
     setLoadedExam(e);
     setForm({
       name: e.name, subject: e.subject ?? "", classId: e.class_id, format: e.format, from: toLocalInput(e.from_time), to: toLocalInput(e.to_time),
-      duration: e.duration_minutes ? String(e.duration_minutes) : "", showResult: e.show_result_immediately,
+      duration: e.duration_minutes ? String(e.duration_minutes) : "", showResult: e.show_result_immediately, allowReference: e.allow_reference ?? false, leavePolicy: e.leave_policy ?? "FLAG",
       templateId: e.template_id ?? "", bankId: e.question_bank_id ?? "",
     });
     setRecipe({ count: e.versions_count || undefined, easy: e.easy, medium: e.medium, hard: e.hard });
@@ -105,6 +107,8 @@ export function ExamFormPage() {
     template_id: needsTemplate ? form.templateId || null : null,
     question_bank_id: form.bankId || null,
     show_result_immediately: form.format === "ONLINE" ? form.showResult : undefined,
+    allow_reference: form.format === "ONLINE" ? form.allowReference : undefined,
+    leave_policy: form.format === "ONLINE" && !form.allowReference ? form.leavePolicy : undefined,
   });
 
   const save = useMutation({
@@ -132,7 +136,16 @@ export function ExamFormPage() {
     if (step === "info") {
       if (!form.name.trim()) return t("exam.err.name", "Hãy nhập tên kỳ thi.");
       if (!form.classId) return t("exam.err.class", "Hãy chọn lớp.");
-      if (form.from && form.to && new Date(form.to) <= new Date(form.from)) return t("exam.err.time", "Thời gian kết thúc phải sau thời gian bắt đầu.");
+      if (!form.from) return t("exam.err.from", "Hãy nhập thời gian bắt đầu.");
+      if (!form.to) return t("exam.err.to", "Hãy nhập thời gian kết thúc.");
+      if (new Date(form.to) <= new Date(form.from)) return t("exam.err.time", "Thời gian kết thúc phải sau thời gian bắt đầu.");
+      // an ONLINE exam is taken on the phone, which needs the working time of the paper
+      if (form.format === "ONLINE") {
+        const minutes = Number.parseInt(form.duration, 10);
+        if (!form.duration.trim() || !Number.isFinite(minutes) || minutes < 1) return t("exam.err.duration", "Kỳ thi online cần thời lượng làm bài (phút).");
+        const windowMinutes = (new Date(form.to).getTime() - new Date(form.from).getTime()) / 60000;
+        if (minutes > windowMinutes) return t("exam.err.durationLong", "Thời lượng làm bài không được dài hơn khoảng từ lúc bắt đầu đến lúc kết thúc.");
+      }
     }
     if (step === "template" && !form.templateId) return t("exam.err.template", "Kỳ thi này cần một mẫu phiếu.");
     if (step === "bank" && !form.bankId) return t("exam.err.bank", "Hãy chọn ngân hàng câu hỏi.");
@@ -202,7 +215,7 @@ export function ExamFormPage() {
                 <Label>{t("exam.field.class", "Lớp")} <span className="text-destructive">*</span></Label>
                 <Select value={form.classId} onValueChange={(v) => set("classId", v)}>
                   <SelectTrigger aria-label={t("exam.field.class", "Lớp")}><SelectValue placeholder={t("exam.pickClass", "Chọn lớp")} /></SelectTrigger>
-                  <SelectContent>{(classes.data?.data ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.class_name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(classes.data?.data ?? []).filter((c) => c.status !== "archived" || c.id === form.classId).map((c) => <SelectItem key={c.id} value={c.id}>{c.class_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -232,12 +245,36 @@ export function ExamFormPage() {
                 <Switch id="ex-show" checked={form.showResult} onCheckedChange={(v) => set("showResult", v)} />
               </div>
             )}
+            {form.format === "ONLINE" && (
+              <div className="flex items-center justify-between gap-4 rounded-xl border p-3">
+                <div>
+                  <Label htmlFor="ex-ref" className="font-medium">{t("exam.field.allowReference", "Cho phép tra cứu tài liệu")}</Label>
+                  <p className="text-xs text-muted-foreground">{t("exam.field.allowReferenceHint", "Bật: thoát khỏi màn hình làm bài (để xem tài liệu) không bị ghi vi phạm. Tắt: thoát màn hình sẽ xử lý theo quy định vi phạm.")}</p>
+                </div>
+                <Switch id="ex-ref" checked={form.allowReference} onCheckedChange={(v) => set("allowReference", v)} />
+              </div>
+            )}
+            {form.format === "ONLINE" && !form.allowReference && (
+              <fieldset className="space-y-2 rounded-xl border p-3">
+                <legend className="px-1 text-sm font-medium">{t("exam.field.leavePolicy", "Khi học sinh tự ý thoát màn hình làm bài")}</legend>
+                {([
+                  ["FLAG", t("exam.leave.flag", "Vẫn cho làm tiếp nhưng báo vi phạm"), t("exam.leave.flagHint", "Bài được chấm, điểm ghi 0 vì vi phạm, giáo viên vẫn xem được bài làm.")],
+                  ["LOCK", t("exam.leave.lock", "Khóa bài thi"), t("exam.leave.lockHint", "Học sinh không làm tiếp được cho đến khi giáo viên mở khóa.")],
+                ] as const).map(([value, label, hint]) => (
+                  <label key={value} className="flex cursor-pointer items-start gap-2 text-sm">
+                    <input type="radio" name="leave-policy" className="mt-1" checked={form.leavePolicy === value} onChange={() => set("leavePolicy", value)} />
+                    <span><span className="font-medium">{label}</span><span className="block text-xs text-muted-foreground">{hint}</span></span>
+                  </label>
+                ))}
+                <p className="text-xs text-muted-foreground">{t("exam.field.phoneOnly", "Thi online chỉ làm được trên ứng dụng điện thoại. Mất mạng không bị tính vi phạm, bài được chấm khi điện thoại đồng bộ lại.")}</p>
+              </fieldset>
+            )}
             {form.format !== "ONLINE" && <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">{resultText({ result_policy: "AFTER_TEACHER_PUBLISH" })}.</p>}
 
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5"><Label htmlFor="ex-from">{t("exam.field.from", "Bắt đầu")}</Label><Input id="ex-from" type="datetime-local" value={form.from} onChange={(e) => set("from", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="ex-to">{t("exam.field.to", "Kết thúc")}</Label><Input id="ex-to" type="datetime-local" value={form.to} onChange={(e) => set("to", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="ex-dur">{t("exam.field.duration", "Thời lượng (phút)")}</Label><Input id="ex-dur" type="number" min={1} value={form.duration} onChange={(e) => set("duration", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor="ex-from">{t("exam.field.from", "Bắt đầu")} <span className="text-destructive">*</span></Label><Input id="ex-from" type="datetime-local" required value={form.from} onChange={(e) => set("from", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor="ex-to">{t("exam.field.to", "Kết thúc")} <span className="text-destructive">*</span></Label><Input id="ex-to" type="datetime-local" required value={form.to} onChange={(e) => set("to", e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor="ex-dur">{t("exam.field.duration", "Thời lượng (phút)")}{form.format === "ONLINE" && <span className="text-destructive"> *</span>}</Label><Input id="ex-dur" type="number" min={1} required={form.format === "ONLINE"} value={form.duration} onChange={(e) => set("duration", e.target.value)} /></div>
             </div>
           </>
         )}
@@ -291,6 +328,7 @@ export function ExamFormPage() {
               <Row k={t("exam.field.class", "Lớp")} v={(classes.data?.data ?? []).find((c) => c.id === form.classId)?.class_name ?? ""} />
               <Row k={t("exam.field.format", "Loại kỳ thi")} v={formatText(form.format).name} />
               <Row k={t("exam.field.result", "Kết quả")} v={resultText({ result_policy: form.format === "ONLINE" && form.showResult ? "IMMEDIATE" : "AFTER_TEACHER_PUBLISH" })} />
+              {form.format === "ONLINE" && <Row k={t("exam.field.allowReference", "Cho phép tra cứu tài liệu")} v={form.allowReference ? t("common.yes", "Có") : t("common.no", "Không")} />}
               {needsTemplate && <Row k={t("exam.step.template", "Mẫu phiếu")} v={template ? `${template.name} (${templateTotal} ${t("exam.questionsShort", "câu")})` : ""} />}
               <Row k={t("exam.field.bank", "Ngân hàng câu hỏi")} v={bank?.name ?? ""} />
               <Row k={t("exam.versions", "Mã đề")} v={versions.length ? versions.map((v) => v.code).join(", ") : t("exam.noVersions", "Chưa có mã đề")} />

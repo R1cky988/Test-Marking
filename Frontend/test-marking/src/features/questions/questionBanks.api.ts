@@ -158,11 +158,10 @@ export async function importQuestionBankFile(bankId: string, file: File): Promis
   return data.data;
 }
 
-/** Header + two example rows (one single-answer, one multiple-answer, with LaTeX) of the .xlsx import template. */
+/** Header + one example row of the .xlsx import template ("Mau-nhap-de.xlsx"). */
 export const IMPORT_QUESTION_TEMPLATE_ROWS: Array<Array<string | number>> = [
   ["STT", "Nội dung câu hỏi", "A", "B", "C", "D", "E", "Đáp án đúng", "Độ khó", "Lời giải"],
   [1, "Giá trị của $2^3$ là", "6", "8", "9", "12", "", "B", "easy", "$2^3 = 2\\cdot 2\\cdot 2 = 8$"],
-  [2, "Các nghiệm của $x^2-5x+6=0$ là", "$1$", "$2$", "$3$", "$4$", "", "B,C", "medium", "$(x-2)(x-3)=0$"],
 ];
 
 /** Image upload of the old rich-text editor (still used by the exam wizard). The question bank itself is plain text + LaTeX. */

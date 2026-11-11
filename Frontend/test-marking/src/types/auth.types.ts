@@ -82,7 +82,7 @@ export interface ForgotPasswordRequestPayload {
 
 export interface ForgotPasswordConfirmPayload {
   email: string;
-  otpCode: string;
+  resetToken: string;
   newPassword: string;
 }
 

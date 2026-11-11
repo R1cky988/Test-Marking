@@ -396,6 +396,22 @@ function drawFixedInfoZone(context: CanvasRenderingContext2D, gridConfig: any) {
   });
 }
 
+/** The sheet code, in the free box above the personal information (between the first two corner markers). */
+function drawSheetCode(context: CanvasRenderingContext2D, sheetCode: string | null | undefined) {
+  const code = sheetCode?.trim();
+  if (!code) return;
+  const centerX = PAGE_WIDTH * 0.285;
+  const top = PAGE_HEIGHT * 0.012;
+  const boxHeight = PAGE_HEIGHT * 0.042;
+  context.save();
+  context.fillStyle = "#111827";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `bold ${Math.round(boxHeight * 0.5)}px Arial, sans-serif`;
+  context.fillText(`${translateWithFallback("templates.bank.sheetCode", "Mã phiếu")}: ${code}`, centerX, top + boxHeight / 2, PAGE_WIDTH * 0.3);
+  context.restore();
+}
+
 async function renderTemplateCanvas(template: Template): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = PAGE_WIDTH;
@@ -412,6 +428,7 @@ async function renderTemplateCanvas(template: Template): Promise<HTMLCanvasEleme
   const backgroundImage = await loadImage(templateBackground);
   drawImageContain(context, backgroundImage, PAGE_WIDTH, PAGE_HEIGHT);
   drawFixedInfoZone(context, template.grid_config);
+  drawSheetCode(context, template.sheet_code);
 
   // ── Render ID Zone ──────────────────────────────────────
   const idGridLayout = calculateIdZoneGridForCanvas(template.grid_config);
@@ -778,7 +795,10 @@ export function TemplateBankPage() {
                     <div className="grid h-10 w-10 place-items-center rounded-md bg-brand-soft text-brand-soft-foreground">
                       <FileText className="h-5 w-5" />
                     </div>
-                    <CardTitle className="text-base">{template.name}</CardTitle>
+                    <div>
+                      <CardTitle className="text-base">{template.name}</CardTitle>
+                      {template.sheet_code && <p className="text-xs text-muted-foreground">{t('templates.bank.sheetCode', { defaultValue: 'Mã phiếu' })}: <span className="font-semibold tabular-nums text-foreground">{template.sheet_code}</span></p>}
+                    </div>
                   </div>
                   <Badge variant="outline">{formatTechnicalValue(template.status)}</Badge>
                 </div>

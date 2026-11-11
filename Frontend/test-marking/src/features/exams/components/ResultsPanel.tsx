@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/detail/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
-import { downloadExamExcel, getResults, scoreText, type Exam, type ResultRow } from "../examsSpring.api";
+import { downloadExamExcel, getResults, scoreText, timeText, type Exam, type ResultRow } from "../examsSpring.api";
 
 /** "Chi tiết bài thi": one line per paper (name, code, right answers, score; a violation is flagged at the end). Export: PDF with photos for paper exams, Excel for ONLINE. */
 export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (r: ResultRow) => void; onRecord: () => void }) {
@@ -40,7 +40,7 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
         <div className="overflow-x-auto rounded-2xl border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr><th className="px-4 py-3">{t("exam.col.name", "Họ tên")}</th><th className="px-4 py-3">{t("exam.col.code", "Mã số")}</th><th className="px-4 py-3">{t("exam.versionLabel", "Mã đề")}</th><th className="px-4 py-3 text-right">{t("exam.result.correct", "Số câu đúng")}</th><th className="px-4 py-3 text-right">{t("exam.result.score", "Điểm")}</th><th className="px-4 py-3" /></tr>
+              <tr><th className="px-4 py-3">{t("exam.col.name", "Họ tên")}</th><th className="px-4 py-3">{t("exam.col.code", "Mã số")}</th><th className="px-4 py-3">{t("exam.versionLabel", "Mã đề")}</th><th className="px-4 py-3 text-right">{t("exam.result.correct", "Số câu đúng")}</th><th className="px-4 py-3 text-right">{t("exam.result.score", "Điểm")}</th><th className="px-4 py-3">{t("exam.result.gradedAt", "Ngày giờ chấm")}</th>{exam.format === "ONLINE" && <th className="px-4 py-3">{t("exam.result.syncedAt", "Đồng bộ lên hệ thống")}</th>}<th className="px-4 py-3" /></tr>
             </thead>
             <tbody className="divide-y">
               {rows.map((r) => (
@@ -50,6 +50,8 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
                   <td className="px-4 py-3 tabular-nums">{r.test_code ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.total_correct ?? 0}/{r.total_questions ?? "—"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{scoreText(r.total_score)}</td>
+                  <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">{timeText(r.graded_at ?? r.submitted_at)}</td>
+                  {exam.format === "ONLINE" && <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">{timeText(r.synced_at)}</td>}
                   <td className="px-4 py-3 text-right">
                     <span className="inline-flex items-center gap-2">
                       {r.has_image && <ImageIcon className="h-4 w-4 text-muted-foreground" aria-label={t("exam.result.photo", "Ảnh bài chấm")} />}

@@ -35,6 +35,7 @@ interface RawTemplate {
   created_at?: string | null;
   updatedAt?: string | null;
   updated_at?: string | null;
+  sheet_code?: string | null;
 }
 
 interface TemplateListResponse {
@@ -81,6 +82,7 @@ export function normalizeTemplate(raw: RawTemplate): Template {
     created_by: raw.created_by ?? raw.createdById ?? null,
     created_at: normalizeDate(raw.created_at ?? raw.createdAt),
     updated_at: normalizeDate(raw.updated_at ?? raw.updatedAt),
+    sheet_code: raw.sheet_code ?? null,
   };
 }
 

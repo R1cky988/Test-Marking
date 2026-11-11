@@ -4,7 +4,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type {
   AuthResponse,
   LoginEmailPayload,
-  LoginGooglePayload,
   RegisterPayload,
   RequestOtpPayload,
   VerifyOtpPayload,
@@ -33,15 +32,6 @@ export async function loginWithEmail(payload: LoginEmailPayload): Promise<AuthRe
   } catch (error) {
     throw normalizeSpringError(error, 'Email hoặc mật khẩu không đúng');
   }
-}
-
-/**
- * Đăng nhập bằng Google OAuth
- * POST /api/v1/auth/login/google
- */
-export async function loginWithGoogle(payload: LoginGooglePayload): Promise<AuthResponse> {
-  const { data } = await axiosClient.post<AuthResponse>('/auth/login/google', payload);
-  return data;
 }
 
 /**
@@ -114,31 +104,46 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<OtpVerifyRes
 }
 
 /**
- * Yêu cầu đặt lại mật khẩu (gửi OTP về email)
- * POST /api/v1/auth/forgot-password/request
+ * Quên mật khẩu, bước 1: kiểm tra email có tồn tại rồi gửi mã 6 số về email đó
+ * POST /api/v1/user/forgot-password { email }
  */
 export async function requestForgotPassword(
   payload: ForgotPasswordRequestPayload
 ): Promise<{ message: string }> {
-  const { data } = await axiosClient.post<{ message: string }>(
-    '/auth/forgot-password/request',
-    payload
-  );
-  return data;
+  try {
+    const { data } = await axiosClient.post('/user/forgot-password', payload);
+    return { message: data?.message ?? '' };
+  } catch (error) {
+    throw normalizeSpringError(error, 'Không gửi được mã đặt lại mật khẩu');
+  }
 }
 
 /**
- * Xác nhận đặt lại mật khẩu với OTP
- * POST /api/v1/auth/forgot-password/confirm
+ * Bước 2: kiểm tra mã, nhận về resetToken dùng một lần
+ * POST /api/v1/user/forgot-password/verify { email, code } -> { resetToken }
+ */
+export async function verifyForgotPasswordCode(payload: { email: string; code: string }): Promise<string> {
+  try {
+    const { data } = await axiosClient.post('/user/forgot-password/verify', payload);
+    return data.data.resetToken as string;
+  } catch (error) {
+    throw normalizeSpringError(error, 'Mã xác nhận không đúng');
+  }
+}
+
+/**
+ * Bước 3: đặt mật khẩu mới bằng resetToken
+ * POST /api/v1/user/forgot-password/reset { email, resetToken, newPassword }
  */
 export async function confirmForgotPassword(
   payload: ForgotPasswordConfirmPayload
 ): Promise<{ message: string }> {
-  const { data } = await axiosClient.post<{ message: string }>(
-    '/auth/forgot-password/confirm',
-    payload
-  );
-  return data;
+  try {
+    const { data } = await axiosClient.post('/user/forgot-password/reset', payload);
+    return { message: data?.message ?? '' };
+  } catch (error) {
+    throw normalizeSpringError(error, 'Đặt lại mật khẩu thất bại');
+  }
 }
 
 /**

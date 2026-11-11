@@ -11,6 +11,9 @@ import { FormatBadge } from "@/features/exams/components/examMeta";
 import { getExamOverview, type OverviewExam } from "@/features/exams/examsSpring.api";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
 
+/** The dashboard shows only the next / latest few; the server sorts, the screen never shows more than this. */
+const DASHBOARD_LIMIT = 4;
+
 function Tile({ icon, label, value, tone, to }: { icon: ReactNode; label: string; value: number; tone: string; to: string }) {
   return (
     <Link to={to} className="group flex items-center gap-4 rounded-2xl border bg-card p-4 transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary">
@@ -28,7 +31,7 @@ function ExamList({ title, icon, exams, total, empty, locale, showEnd }: { title
       <h2 className="mb-3 flex items-center gap-2 text-base font-semibold [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground">{icon}{title}<span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">{total}</span></h2>
       {exams.length === 0 ? <p className="py-4 text-sm text-muted-foreground">{empty}</p> : (
         <ul className="divide-y">
-          {exams.map((e) => (
+          {exams.slice(0, DASHBOARD_LIMIT).map((e) => (
             <li key={e.id}>
               <Link to={`/exams/${e.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 hover:text-primary">
                 <span className="min-w-0 flex-1">
@@ -79,7 +82,7 @@ export function DashboardPage() {
               <h2 className="mb-3 flex items-center gap-2 text-base font-semibold [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"><School />{t("dashboard.relatedClasses", "Lớp liên quan")}<span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">{data.data.class_count}</span></h2>
               {data.data.classes.length === 0 ? <EmptyState icon={<School />} title={t("dashboard.noClasses", "Bạn chưa tham gia lớp nào")} /> : (
                 <ul className="flex flex-wrap gap-2">
-                  {data.data.classes.map((c) => (
+                  {data.data.classes.slice(0, DASHBOARD_LIMIT).map((c) => (
                     <li key={c.id}>
                       <Link to={`/classes/${c.id}`} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm hover:border-primary hover:text-primary">
                         {c.name}<span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{c.role === "TEACHER" ? t("dashboard.roleTeacher", "Giáo viên") : t("dashboard.roleStudent", "Học sinh")}</span>

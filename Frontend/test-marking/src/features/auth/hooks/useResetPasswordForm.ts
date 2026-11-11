@@ -11,7 +11,6 @@ import i18n from '@/i18n';
 // ---- Zod Schema ----
 export const resetPasswordSchema = z
   .object({
-    otpCode: z.string().length(6, i18n.t('auth.validation.otpLength')),
     newPassword: z
       .string()
       .min(8, i18n.t('auth.validation.passwordMin'))
@@ -28,7 +27,7 @@ export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 interface LocationState {
   email: string;
-  otpCode?: string;
+  resetToken?: string;
 }
 
 export function useResetPasswordForm() {
@@ -36,20 +35,19 @@ export function useResetPasswordForm() {
   const location = useLocation();
   const locationState = location.state as LocationState | null;
   const email = locationState?.email ?? '';
-  const presetOtpCode = locationState?.otpCode ?? '';
+  const resetToken = locationState?.resetToken ?? '';
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      otpCode: presetOtpCode,
       newPassword: '',
       confirmPassword: '',
     },
   });
 
   const onSubmit = async (values: ResetPasswordFormValues) => {
-    if (!email) {
+    if (!email || !resetToken) {
       toast.error(i18n.t('auth.toasts.passwordResetMissing'));
       navigate('/forgot-password');
       return;
@@ -59,11 +57,11 @@ export function useResetPasswordForm() {
     try {
       await confirmForgotPassword({
         email,
-        otpCode: values.otpCode,
+        resetToken,
         newPassword: values.newPassword,
       });
       toast.success(i18n.t('auth.toasts.passwordResetSuccess'));
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (error) {
       handleApiError(error, i18n.t('auth.toasts.passwordResetFailed'));
     } finally {

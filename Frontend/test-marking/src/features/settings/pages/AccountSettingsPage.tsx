@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import {
   CalendarDays,
   Eye,
   EyeOff,
   Languages,
   Laptop,
-  Link2,
   Loader2,
   LockKeyhole,
   Mail,
@@ -30,9 +28,7 @@ import {
   changePassword,
   getProfile,
   getSessions,
-  linkGoogleAccount,
   revokeSession,
-  unlinkGoogleAccount,
   updateProfile,
   uploadAvatar,
   type AuthProfile,
@@ -65,9 +61,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatUserFacingMessage, getApiErrorMessage } from "@/lib/apiErrorMessage";
-import { appConfig } from "@/config/env";
-import { requestGoogleIdToken } from "@/lib/googleIdentity";
+import { getApiErrorMessage } from "@/lib/apiErrorMessage";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getDeviceId } from "@/lib/device";
 
@@ -174,17 +168,6 @@ function genderLabel(value?: string | null) {
   }
 }
 
-function GoogleIcon() {
-  return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-  );
-}
-
 export function AccountSettingsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -214,9 +197,6 @@ export function AccountSettingsPage() {
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isGoogleActionLoading, setIsGoogleActionLoading] = useState(false);
-  const [isUnlinkGoogleOpen, setIsUnlinkGoogleOpen] = useState(false);
-  const [isPasswordSetupRequiredOpen, setIsPasswordSetupRequiredOpen] = useState(false);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [sessionPendingRevoke, setSessionPendingRevoke] = useState<AuthSession | null>(null);
   const [showPasswords, setShowPasswords] = useState({
@@ -243,7 +223,6 @@ export function AccountSettingsPage() {
   const displayName = profile?.fullName || user?.fullName || t("settings.teacherFallback");
   const avatarUrl = resolveServerImageUrl(profile?.avatarUrl || user?.avatarUrl);
   const initials = getInitials(displayName, t("settings.initialsFallback"));
-  const isGoogleLinked = Boolean(profile?.googleId);
   const hasPassword = profile?.hasPassword ?? true;
   const currentDeviceId = getDeviceId();
   const profileFormChanged = Boolean(
@@ -599,69 +578,6 @@ export function AccountSettingsPage() {
     }
   }
 
-  function applyRefreshedProfile(updated: AuthProfile) {
-    setProfile(updated);
-    if (user) {
-      setUser({
-        ...user,
-        fullName: updated.fullName,
-        email: updated.email,
-        avatarUrl: updated.avatarUrl,
-        googleId: updated.googleId,
-        role: updated.role as typeof user.role,
-      });
-    }
-  }
-
-  async function handleLinkGoogle() {
-    try {
-      setIsGoogleActionLoading(true);
-      const googleIdToken = await requestGoogleIdToken(appConfig.googleClientId);
-      await linkGoogleAccount(googleIdToken);
-      applyRefreshedProfile(await getProfile());
-      toast.success(t("settings.googleLinkSuccess"));
-    } catch (error) {
-      const errorCode = axios.isAxiosError(error) ? error.response?.data?.error?.code : null;
-      const localizedError =
-        errorCode === "GOOGLE_EMAIL_MISMATCH"
-          ? t("settings.googleEmailMismatch")
-          : errorCode === "GOOGLE_ACCOUNT_ALREADY_LINKED"
-            ? t("settings.googleAlreadyLinked")
-            : errorCode === "GOOGLE_ACCOUNT_WRONG_ROLE" || errorCode === "GOOGLE_ACCOUNT_NOT_REGISTERED"
-              ? t("settings.googleWrongAccount")
-              : null;
-      const fallback = error instanceof Error
-        ? formatUserFacingMessage(error.message)
-        : t("settings.googleLinkError");
-      toast.error(localizedError ?? getApiErrorMessage(error, fallback));
-    } finally {
-      setIsGoogleActionLoading(false);
-    }
-  }
-
-  async function handleUnlinkGoogle() {
-    try {
-      setIsGoogleActionLoading(true);
-      await unlinkGoogleAccount();
-      applyRefreshedProfile(await getProfile());
-      setIsUnlinkGoogleOpen(false);
-      toast.success(t("settings.googleUnlinkSuccess"));
-    } catch (error) {
-      const errorCode = axios.isAxiosError(error) ? error.response?.data?.error?.code : null;
-      toast.error(
-        errorCode === "PASSWORD_REQUIRED_BEFORE_UNLINK"
-          ? t("settings.googlePasswordRequired")
-          : getApiErrorMessage(error, t("settings.googleUnlinkError")),
-      );
-      if (errorCode === "PASSWORD_REQUIRED_BEFORE_UNLINK") {
-        setIsUnlinkGoogleOpen(false);
-        setIsPasswordSetupRequiredOpen(true);
-      }
-    } finally {
-      setIsGoogleActionLoading(false);
-    }
-  }
-
   async function handleChangePassword() {
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       toast.error(t("settings.passwordRequired"));
@@ -938,70 +854,6 @@ export function AccountSettingsPage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>{t("settings.googleTitle")}</CardTitle>
-                  <CardDescription>{t("settings.googleDesc")}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-4 rounded-md border p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-background">
-                        <GoogleIcon />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-foreground">Google</span>
-                          <Badge variant={isGoogleLinked ? "default" : "secondary"}>
-                            {isGoogleLinked
-                              ? t("settings.googleLinked")
-                              : t("settings.googleNotLinked")}
-                          </Badge>
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {isGoogleLinked
-                            ? t("settings.googleLinkedDesc", { email: profile?.email || user?.email || "" })
-                            : t("settings.googleNotLinkedDesc")}
-                        </p>
-                      </div>
-                    </div>
-                    {isGoogleLinked ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="gap-2 text-red-600 hover:text-red-700"
-                        disabled={isGoogleActionLoading || isLoadingProfile}
-                        onClick={() => setIsUnlinkGoogleOpen(true)}
-                      >
-                        {isGoogleActionLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                        {t("settings.googleUnlink")}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="gap-2"
-                        disabled={isGoogleActionLoading || isLoadingProfile}
-                        onClick={() => void handleLinkGoogle()}
-                      >
-                        {isGoogleActionLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Link2 className="h-4 w-4" />
-                        )}
-                        {isGoogleActionLoading
-                          ? t("settings.googleLinking")
-                          : t("settings.googleLink")}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
                   <CardTitle>{t("settings.passwordTitle")}</CardTitle>
                   <CardDescription>{t("settings.passwordDesc")}</CardDescription>
                 </CardHeader>
@@ -1252,33 +1104,6 @@ export function AccountSettingsPage() {
         </section>
       </div>
 
-      <AlertDialog open={isUnlinkGoogleOpen} onOpenChange={setIsUnlinkGoogleOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("settings.googleUnlinkConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("settings.googleUnlinkConfirmDesc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isGoogleActionLoading}>
-              {t("settings.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isGoogleActionLoading}
-              onClick={(event) => {
-                event.preventDefault();
-                void handleUnlinkGoogle();
-              }}
-            >
-              {isGoogleActionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("settings.googleUnlink")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog
         open={Boolean(sessionPendingRevoke)}
         onOpenChange={(open) => {
@@ -1308,32 +1133,6 @@ export function AccountSettingsPage() {
             >
               {revokingSessionId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("settings.revokeSession", "Thu hồi")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={isPasswordSetupRequiredOpen}
-        onOpenChange={setIsPasswordSetupRequiredOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("settings.googlePasswordSetupTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("settings.googlePasswordSetupDesc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("settings.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                navigate("/forgot-password", {
-                  state: { email: profile?.email ?? user?.email ?? "" },
-                })
-              }
-            >
-              {t("settings.googlePasswordSetupAction")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

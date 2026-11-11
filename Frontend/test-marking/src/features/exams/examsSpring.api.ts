@@ -39,6 +39,10 @@ export interface Exam {
   hard: number;
   questions_per_version: number;
   show_result_immediately: boolean;
+  /** ONLINE: the student may look things up, so leaving the exam screen is not a violation */
+  allow_reference: boolean;
+  /** ONLINE, closed book: FLAG = leaving the screen is a violation, LOCK = the exam locks until the teacher unlocks it */
+  leave_policy: LeavePolicy;
   result_policy: ResultPolicy;
   is_score_published: boolean;
   /** the students may see the results: published by the teacher, or ONLINE with immediate result */
@@ -46,6 +50,8 @@ export interface Exam {
   my_role: ExamRole;
   created_at: string | null;
 }
+
+export type LeavePolicy = "FLAG" | "LOCK";
 
 export interface ExamPayload {
   name: string;
@@ -59,6 +65,8 @@ export interface ExamPayload {
   template_id?: string | null;
   question_bank_id?: string | null;
   show_result_immediately?: boolean;
+  allow_reference?: boolean;
+  leave_policy?: LeavePolicy;
 }
 
 export interface ExamVersion {
@@ -87,6 +95,9 @@ export interface ExamVersionDetail {
 }
 
 export interface ExamPrint {
+  /** the answer sheet of the exam: its name and "mã phiếu" (null when the exam has none) */
+  template_name?: string | null;
+  sheet_code?: string | null;
   exam_id: string;
   exam_name: string;
   versions: ExamVersionDetail[];
@@ -230,7 +241,20 @@ export interface Participant {
   total_correct: number | null;
   is_violation: boolean;
   submitted_at: string | null;
+  /** ONLINE (phone): NOT_STARTED / IN_PROGRESS / LOCKED / SUBMITTED; absent for other formats */
+  attempt_status?: "NOT_STARTED" | "IN_PROGRESS" | "LOCKED" | "SUBMITTED";
+  left_count?: number;
+  /** when the phone's answers reached the server, and when the system marked the paper */
+  synced_at?: string | null;
+  graded_at?: string | null;
+  /** ONLINE: reported for leaving the exam screen; flag_decision null = the teacher has not decided yet */
+  is_flagged?: boolean;
+  flag_reason?: string | null;
+  flag_decision?: FlagDecision | null;
+  penalty_points?: number | null;
 }
+
+export type FlagDecision = "ZERO" | "DEDUCT" | "DISMISS";
 
 export interface ResultRow {
   id: string;
@@ -247,11 +271,32 @@ export interface ResultRow {
   source: string;
   status: string;
   submitted_at: string | null;
+  /** when the system marked the paper */
+  graded_at?: string | null;
+  /** ONLINE: when the phone's answers reached the server (the phone may have worked offline before) */
+  synced_at?: string | null;
+  /** ONLINE: when the student handed in on his phone */
+  client_submitted_at?: string | null;
+  /** ONLINE: reported for leaving the exam screen (leave_policy FLAG); the teacher decides what it costs */
+  is_flagged?: boolean;
+  flag_reason?: string | null;
+  flag_decision?: FlagDecision | null;
+  penalty_points?: number | null;
 }
 
-export interface ResultAnswer { order: number; choice: string | null; correct_answer: string; is_correct: boolean }
+export interface ResultOption { label: string; content: string; is_correct: boolean }
+export interface ResultAnswer {
+  order: number;
+  choice: string | null;
+  correct_answer: string;
+  is_correct: boolean;
+  /** the question as printed on the paper, its options and the explanation (when there is one) */
+  question?: string | null;
+  options?: ResultOption[];
+  explanation?: string | null;
+}
 export interface ResultDetail { result: ResultRow; max_score: number; answers: ResultAnswer[] }
-export interface MyResult { released: boolean; submitted: boolean; detail?: ResultDetail }
+export interface MyResult { released: boolean; submitted: boolean; detail?: ResultDetail; /** reported and not decided yet: the score is held back */ pending_review?: boolean }
 
 export interface OptionStat { label: string; content: string; is_correct: boolean; count: number; percent: number }
 export interface QuestionStat {
@@ -279,10 +324,15 @@ export interface RecordResultPayload {
 export const getExamStats = async (id: string) => (await axiosClient.get<ApiSingleResponse<ExamStats>>(`/exams/${id}/stats`)).data.data;
 export const getParticipants = async (id: string, submitted = false) =>
   (await axiosClient.get<ApiSingleResponse<Participant[]>>(`/exams/${id}/participants`, { params: submitted ? { submitted: true } : undefined })).data.data;
+export const unlockAttempt = async (id: string, studentId: string) =>
+  (await axiosClient.post<ApiSingleResponse<Participant>>(`/exams/${id}/attempts/${studentId}/unlock`)).data.data;
 export const getResults = async (id: string) => (await axiosClient.get<ApiSingleResponse<ResultRow[]>>(`/exams/${id}/results`)).data.data;
 export const getResult = async (id: string, resultId: string) => (await axiosClient.get<ApiSingleResponse<ResultDetail>>(`/exams/${id}/results/${resultId}`)).data.data;
 export const getMyResult = async (id: string) => (await axiosClient.get<ApiSingleResponse<MyResult>>(`/exams/${id}/my-result`)).data.data;
 export const getViolations = async (id: string) => (await axiosClient.get<ApiSingleResponse<ResultRow[]>>(`/exams/${id}/violations`)).data.data;
+/** What a paper reported for leaving the exam screen costs: ZERO (0 points), DEDUCT (minus penalty_points) or DISMISS. */
+export const decideFlag = async (id: string, studentId: string, decision: FlagDecision, penaltyPoints?: number) =>
+  (await axiosClient.put<ApiSingleResponse<Participant>>(`/exams/${id}/flags`, { student_id: studentId, decision, penalty_points: penaltyPoints })).data.data;
 export const getAnalysis = async (id: string) => (await axiosClient.get<ApiSingleResponse<ExamAnalysis>>(`/exams/${id}/analysis`)).data.data;
 export const recordResult = async (id: string, payload: RecordResultPayload) => (await axiosClient.post<ApiSingleResponse<ResultDetail>>(`/exams/${id}/results`, payload)).data.data;
 export const setViolation = async (id: string, studentId: string, violation: boolean, reason?: string) =>
@@ -319,6 +369,11 @@ export const getExamOverview = async () => (await axiosClient.get<ApiSingleRespo
 
 // ── export ──
 
+export const timeText = (iso: string | null | undefined) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("vi-VN", { hour12: false });
+};
 export const scoreText = (v: number | null | undefined) => (v == null ? "—" : Number(v).toLocaleString("vi-VN", { maximumFractionDigits: 2 }));
 
 /** Rows for the export: student code (HSxxxxxxxx), version, right answers, score. A violation is 0 points. */

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
-import { verifyOtp, requestOtp, verifyEmail, resendVerificationCode } from '@/api/endpoints/auth.api';
+import { verifyOtp, requestOtp, verifyEmail, resendVerificationCode, verifyForgotPasswordCode, requestForgotPassword } from '@/api/endpoints/auth.api';
 import { useAuthStore } from '@/store/useAuthStore';
 import { OtpType } from '@/types/auth.types';
 import { handleApiError } from '@/lib/handleApiError';
@@ -56,15 +56,14 @@ export function useOtpForm() {
       return;
     }
 
-    if (type === OtpType.ForgotPassword) {
-      navigate('/reset-password', {
-        state: { email, otpCode: otp },
-      });
-      return;
-    }
-
     setIsLoading(true);
     try {
+      if (type === OtpType.ForgotPassword) {
+        // the server checks the code and hands back a one-time token for the "new password" step
+        const resetToken = await verifyForgotPasswordCode({ email, code: otp });
+        navigate('/reset-password', { state: { email, resetToken } });
+        return;
+      }
       if (type === OtpType.Register) {
         // Spring: POST /user/verify-email activates the account and returns tokens -> sign in right away
         const authResponse = await verifyEmail({ email, code: otp });
@@ -93,6 +92,7 @@ export function useOtpForm() {
     setIsResending(true);
     try {
       if (type === OtpType.Register) await resendVerificationCode(email);
+      else if (type === OtpType.ForgotPassword) await requestForgotPassword({ email });
       else await requestOtp({ email, type });
       setCountdown(OTP_DURATION_SECONDS);
       setOtp('');

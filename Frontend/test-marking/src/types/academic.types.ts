@@ -150,6 +150,8 @@ export interface Template {
   created_by: string | null;
   created_at: string | null;
   updated_at: string | null;
+  /** "mã phiếu" printed on the sheet: the template id with at least two digits (1 -> 01) */
+  sheet_code?: string | null;
 }
 
 export interface QuestionOption {

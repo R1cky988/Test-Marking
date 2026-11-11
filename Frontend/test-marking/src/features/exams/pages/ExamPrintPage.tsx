@@ -34,7 +34,7 @@ export function ExamPrintPage() {
 
   if (data.isLoading) return <div className="p-8"><Skeleton className="mx-auto h-96 max-w-3xl" /></div>;
   if (data.isError || !data.data) return <div role="alert" className="p-8 text-center text-sm text-destructive">{getApiErrorMessage(data.error, t("exam.print.failed", "Không tải được dữ liệu in"))}</div>;
-  const { exam_name, versions } = data.data;
+  const { exam_name, versions, sheet_code, template_name } = data.data;
 
   return (
     <div className="h-full overflow-y-auto bg-muted/40 py-6 print:h-auto print:overflow-visible print:bg-white print:py-0">
@@ -54,6 +54,13 @@ export function ExamPrintPage() {
           <header className="mb-6 text-center">
             <h1 className="text-2xl font-bold uppercase tracking-wide">{t("exam.print.exam", "Kỳ thi")} {exam_name}</h1>
             <p className="mt-2 text-lg font-semibold">{t("exam.versionLabel", "Mã đề")}: <span className="tabular-nums">{v.code}</span></p>
+            {(sheet_code || template_name) && (
+              <p className="mt-1 text-base" data-testid="sheet-info">
+                {sheet_code && <>{t("exam.sheetCode", "Mã phiếu")}: <span className="font-semibold tabular-nums">{sheet_code}</span></>}
+                {sheet_code && template_name && " · "}
+                {template_name && <>{t("exam.sheetName", "Tên phiếu")}: <span className="font-semibold">{template_name}</span></>}
+              </p>
+            )}
           </header>
           <ol className="space-y-4 text-[13px]">
             {v.questions.map((q) => (

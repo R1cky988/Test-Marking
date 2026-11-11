@@ -13,7 +13,7 @@
     "search": {
       "button": "Search",
       "title": "Command palette",
-      "description": "Navigate through ExamHub",
+      "description": "Navigate through TestMarking",
       "placeholder": "Search pages...",
       "noResults": "No results found.",
       "navigation": "Navigation",
@@ -1122,10 +1122,10 @@
     },
     "forgotPassword": {
       "title": "Forgot password?",
-      "subtitle": "Enter your email address and we'll send you an OTP to reset your password.",
+      "subtitle": "Enter your registered email and we will send a 6-digit code to reset your password.",
       "emailLabel": "Registered email",
       "emailPlaceholder": "teacher@school.edu.vn",
-      "submit": "Send OTP",
+      "submit": "Send code",
       "submitting": "Sending...",
       "remembered": "Remember your password?",
       "loginLink": "Sign in"
@@ -1134,7 +1134,7 @@
       "title": "OTP Verification",
       "subtitle": "An OTP has been sent to",
       "checkInbox": "Please check your inbox.",
-      "forgotNote": "For password reset, you will be redirected to the reset screen after verification.",
+      "forgotNote": "After you enter the correct code you can set a new password.",
       "expiresIn": "Code expires in",
       "verify": "Verify",
       "verifying": "Verifying...",
@@ -1146,10 +1146,8 @@
     },
     "resetPassword": {
       "title": "Reset password",
-      "subtitlePrefix": "Enter the OTP sent to",
-      "subtitleSuffix": "and create a new password.",
-      "otpLabel": "OTP Code",
-      "otpHint": "Enter the 6-digit code from your email",
+      "subtitlePrefix": "Code confirmed for",
+      "subtitleSuffix": ". Create a new password.",
       "newPassword": "New password",
       "newPasswordPlaceholder": "At least 8 characters, letters and numbers",
       "confirmPassword": "Confirm password",
@@ -1181,7 +1179,7 @@
       "otpIncomplete": "Please enter all 6 digits.",
       "otpEmailMissing": "Missing verification email. Please restart the process.",
       "passwordResetMissing": "Missing recovery email. Please request a new reset.",
-      "passwordResetOtpSent": "A password reset OTP has been sent to your email.",
+      "passwordResetOtpSent": "A confirmation code has been sent to your email.",
       "passwordResetRequestFailed": "Unable to send the password reset request. Please try again.",
       "passwordResetSuccess": "Password has been reset successfully! Please sign in.",
       "passwordResetFailed": "Failed to reset password. Please try again."
@@ -1199,7 +1197,7 @@
     "search": {
       "button": "Search",
       "title": "Command palette",
-      "description": "Navigate through ExamHub",
+      "description": "Navigate through TestMarking",
       "placeholder": "Search pages...",
       "noResults": "No results found.",
       "navigation": "Navigation",
@@ -1216,7 +1214,7 @@
     "logoutConfirm": "Are you sure you want to sign out?"
   },
   "authLayout": {
-    "appTitle": "ExamHub",
+    "appTitle": "TestMarking",
     "appSubtitle": "Workspace for teachers",
     "audience": "For teachers",
     "headingPrefix": "Manage tests",
@@ -1240,7 +1238,7 @@
         "desc": "Know when students submit work or when something needs attention"
       }
     },
-    "copyright": "ExamHub Teacher Portal. All rights reserved."
+    "copyright": "TestMarking Teacher Portal. All rights reserved."
   },
   "classesPage": {
     "title": "Class management",

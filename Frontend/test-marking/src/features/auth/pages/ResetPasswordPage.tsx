@@ -9,14 +9,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-  InputOTPSeparator,
-} from '@/components/ui/input-otp';
 import { useResetPasswordForm } from '@/features/auth/hooks/useResetPasswordForm';
 import { AuthPageHeader } from '@/features/auth/components/AuthPageHeader';
 import { AuthSubmitButton } from '@/features/auth/components/AuthSubmitButton';
@@ -46,41 +39,6 @@ export function ResetPasswordPage() {
 
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-5">
-          {/* OTP Code */}
-          <FormField
-            control={form.control}
-            name="otpCode"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('auth.resetPassword.otpLabel')}</FormLabel>
-                <FormDescription className="text-xs">
-                  {t('auth.resetPassword.otpHint')}
-                </FormDescription>
-                <FormControl>
-                  <InputOTP
-                    id="reset-otp-input"
-                    maxLength={6}
-                    value={field.value}
-                    onChange={field.onChange}
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                    </InputOTPGroup>
-                    <InputOTPSeparator />
-                    <InputOTPGroup>
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           {/* New Password */}
           <FormField
             control={form.control}

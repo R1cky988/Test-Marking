@@ -32,7 +32,7 @@ async function saveTemplate() {
   ws["!cols"] = [{ wch: 6 }, { wch: 28 }, { wch: 34 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Students");
-  XLSX.writeFile(wb, "mau-nhap-hoc-sinh.xlsx");
+  XLSX.writeFile(wb, "Mau-them-hoc-sinh.xlsx");
 }
 
 /**
@@ -86,9 +86,9 @@ export function ImportStudentsDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <Button type="button" variant="link" className="h-auto p-0" onClick={() => void saveTemplate()}>
-            <Download className="mr-1 h-4 w-4" />
-            {t("classes.importStudents.template", { defaultValue: "Tải tệp mẫu" })}
+          <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => void saveTemplate()}>
+            <Download className="h-4 w-4" />
+            {t("classes.importStudents.template", { defaultValue: "Tải mẫu nhập" })}
           </Button>
 
           <div className="space-y-2">

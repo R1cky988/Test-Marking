@@ -13,7 +13,7 @@
     "search": {
       "button": "Tìm kiếm",
       "title": "Bảng lệnh",
-      "description": "Di chuyển nhanh trong ExamHub",
+      "description": "Di chuyển nhanh trong TestMarking",
       "placeholder": "Tìm trang...",
       "noResults": "Không tìm thấy kết quả.",
       "navigation": "Điều hướng",
@@ -1122,10 +1122,10 @@
     },
     "forgotPassword": {
       "title": "Quên mật khẩu?",
-      "subtitle": "Nhập địa chỉ email của bạn và chúng tôi sẽ gửi mã OTP để đặt lại mật khẩu.",
+      "subtitle": "Nhập email đã đăng ký, chúng tôi sẽ gửi mã xác nhận 6 số để bạn đặt lại mật khẩu.",
       "emailLabel": "Email đã đăng ký",
       "emailPlaceholder": "giaovien@truong.edu.vn",
-      "submit": "Gửi mã OTP",
+      "submit": "Gửi mã xác nhận",
       "submitting": "Đang gửi...",
       "remembered": "Nhớ ra mật khẩu rồi?",
       "loginLink": "Đăng nhập"
@@ -1134,7 +1134,7 @@
       "title": "Xác thực OTP",
       "subtitle": "Mã OTP đã được gửi đến",
       "checkInbox": "Vui lòng kiểm tra hộp thư đến.",
-      "forgotNote": "Với luồng quên mật khẩu, hệ thống sẽ chuyển sang màn hình đặt lại mật khẩu sau khi xác nhận mã.",
+      "forgotNote": "Sau khi nhập đúng mã, bạn sẽ được đặt mật khẩu mới.",
       "expiresIn": "Mã hết hạn sau",
       "verify": "Xác thực",
       "verifying": "Đang xác thực...",
@@ -1146,10 +1146,8 @@
     },
     "resetPassword": {
       "title": "Đặt lại mật khẩu",
-      "subtitlePrefix": "Nhập mã OTP đã được gửi đến",
-      "subtitleSuffix": "và tạo mật khẩu mới.",
-      "otpLabel": "Mã OTP",
-      "otpHint": "Nhập mã 6 chữ số từ email của bạn",
+      "subtitlePrefix": "Mã đã được xác nhận cho",
+      "subtitleSuffix": ". Hãy tạo mật khẩu mới.",
       "newPassword": "Mật khẩu mới",
       "newPasswordPlaceholder": "Ít nhất 8 ký tự, có chữ và số",
       "confirmPassword": "Xác nhận mật khẩu",
@@ -1181,7 +1179,7 @@
       "otpIncomplete": "Vui lòng nhập đủ 6 chữ số.",
       "otpEmailMissing": "Thiếu email xác thực. Vui lòng bắt đầu lại quy trình.",
       "passwordResetMissing": "Thiếu email khôi phục. Vui lòng gửi lại yêu cầu đặt lại mật khẩu.",
-      "passwordResetOtpSent": "Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn.",
+      "passwordResetOtpSent": "Mã xác nhận đã được gửi đến email của bạn.",
       "passwordResetRequestFailed": "Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng thử lại.",
       "passwordResetSuccess": "Đặt lại mật khẩu thành công! Vui lòng đăng nhập.",
       "passwordResetFailed": "Đặt lại mật khẩu thất bại, vui lòng thử lại."
@@ -1199,7 +1197,7 @@
     "search": {
       "button": "Tìm kiếm",
       "title": "Bảng lệnh",
-      "description": "Di chuyển nhanh trong ExamHub",
+      "description": "Di chuyển nhanh trong TestMarking",
       "placeholder": "Tìm trang...",
       "noResults": "Không tìm thấy kết quả.",
       "navigation": "Điều hướng",
@@ -1216,7 +1214,7 @@
     "logoutConfirm": "Bạn có chắc chắn muốn đăng xuất?"
   },
   "authLayout": {
-    "appTitle": "ExamHub",
+    "appTitle": "TestMarking",
     "appSubtitle": "Cổng làm việc cho giáo viên",
     "audience": "Dành cho giáo viên",
     "headingPrefix": "Quản lý bài kiểm tra",
@@ -1240,7 +1238,7 @@
         "desc": "Biết khi có bài nộp mới hoặc có vấn đề trong lúc học sinh làm bài"
       }
     },
-    "copyright": "ExamHub Teacher Portal. All rights reserved."
+    "copyright": "TestMarking Teacher Portal. All rights reserved."
   },
   "classesPage": {
     "title": "Quản lý lớp học",

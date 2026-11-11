@@ -83,6 +83,8 @@ export function ExamDetailPage() {
     ...(teacher ? [
       [t("exam.field.duration", "Thời lượng (phút)"), e.duration_minutes ? String(e.duration_minutes) : "—"] as [string, string],
       [t("exam.field.result", "Kết quả"), resultText(e)] as [string, string],
+      ...(e.format === "ONLINE" ? [[t("exam.field.allowReference", "Cho phép tra cứu tài liệu"), e.allow_reference ? t("common.yes", "Có") : t("common.no", "Không")] as [string, string]] : []),
+      ...(e.format === "ONLINE" && !e.allow_reference ? [[t("exam.field.leavePolicy", "Khi học sinh tự ý thoát màn hình làm bài"), e.leave_policy === "LOCK" ? t("exam.leave.lock", "Khóa bài thi") : t("exam.leave.flag", "Vẫn cho làm tiếp nhưng báo vi phạm")] as [string, string]] : []),
       [t("exam.step.template", "Mẫu phiếu"), e.template_name ? `${e.template_name} (${e.template_total_questions ?? 0} ${t("exam.questionsShort", "câu")})` : "—"] as [string, string],
       [t("exam.field.bank", "Ngân hàng câu hỏi"), e.question_bank_name ?? "—"] as [string, string],
     ] : []),
@@ -100,11 +102,9 @@ export function ExamDetailPage() {
           </div>
           {teacher && (
             <div className="flex flex-wrap gap-2">
-              {e.format === "OFFLINE" && (
-                <Button asChild variant="outline" className="gap-2" disabled={(versions.data ?? []).length === 0}>
-                  <Link to={`/exams/${e.id}/print`}><Printer className="h-4 w-4" />{t("exam.printA4", "Xuất mã đề A4")}</Link>
-                </Button>
-              )}
+              <Button asChild variant="outline" className="gap-2" disabled={(versions.data ?? []).length === 0}>
+                <Link to={`/exams/${e.id}/print`}><Printer className="h-4 w-4" />{t("exam.printA4", "Xuất mã đề A4")}</Link>
+              </Button>
               {draft && <Button asChild variant="outline" className="gap-2"><Link to={`/exams/${e.id}/edit`}><Pencil className="h-4 w-4" />{t("exam.edit", "Sửa kỳ thi")}</Link></Button>}
               {draft && <Button className="gap-2" disabled={(versions.data ?? []).length === 0 || publish.isPending} onClick={() => publish.mutate()}><Rocket className="h-4 w-4" />{t("exam.publish", "Công bố kỳ thi")}</Button>}
               {draft && <Button variant="ghost" size="icon" onClick={() => setConfirmDelete(true)} aria-label={t("exam.delete", "Xóa kỳ thi")} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
@@ -144,7 +144,7 @@ export function ExamDetailPage() {
                   <StatsPanel stats={stats.data} format={e.format} teacher onShowSubmitted={e.format === "OFFLINE" ? undefined : () => { setFilter("submitted"); goTab("participants"); }} />
                 )}
               </TabsContent>
-              <TabsContent value="participants"><ParticipantsPanel examId={e.id} filter={filter} onFilter={setFilter} showSubmit={e.format !== "OFFLINE"} onOpen={(p) => (p.result_id ? setOpenResult(p.result_id) : setRecording({ open: true, student: p.student_id }))} /></TabsContent>
+              <TabsContent value="participants"><ParticipantsPanel examId={e.id} filter={filter} onFilter={setFilter} showSubmit={e.format !== "OFFLINE"} online={e.format === "ONLINE"} onOpen={(p) => (p.result_id ? setOpenResult(p.result_id) : setRecording({ open: true, student: p.student_id }))} /></TabsContent>
               <TabsContent value="results"><ResultsPanel exam={e} onOpen={(r) => setOpenResult(r.id)} onRecord={() => setRecording({ open: true })} /></TabsContent>
               <TabsContent value="analysis"><AnalysisPanel examId={e.id} /></TabsContent>
               <TabsContent value="violations"><ViolationsPanel examId={e.id} onOpen={(r) => setOpenResult(r.id)} /></TabsContent>

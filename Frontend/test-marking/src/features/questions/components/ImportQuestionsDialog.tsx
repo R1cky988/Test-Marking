@@ -15,7 +15,7 @@ async function saveTemplate() {
   ws["!cols"] = [{ wch: 6 }, { wch: 46 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 36 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Câu hỏi");
-  XLSX.writeFile(wb, "mau-import-cau-hoi.xlsx");
+  XLSX.writeFile(wb, "Mau-nhap-de.xlsx");
 }
 
 export function ImportQuestionsDialog({ bankId, open, onOpenChange }: { bankId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -67,7 +67,7 @@ export function ImportQuestionsDialog({ bankId, open, onOpenChange }: { bankId: 
         <div className="space-y-4">
           <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => void saveTemplate()}>
             <Download className="h-4 w-4" />
-            {t("qb.import.template", "Tải tệp mẫu")}
+            {t("qb.import.template", "Tải mẫu nhập")}
           </Button>
 
           <button
