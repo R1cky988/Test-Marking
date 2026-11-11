@@ -1,5 +1,6 @@
 package com.example.testmarking.adapter.persistance.adapters;
 
+import com.example.testmarking.adapter.persistance.repository.PasswordResetCodeRepository;
 import com.example.testmarking.adapter.persistance.repository.StudentRepository;
 import com.example.testmarking.adapter.persistance.repository.UserRepository;
 import com.example.testmarking.adapter.persistance.repository.VerificationCodeRepository;
@@ -11,6 +12,7 @@ import com.example.testmarking.adapter.rest.dtos.request.UpdateUserRequest;
 import com.example.testmarking.adapter.rest.dtos.response.AuthResponse;
 import com.example.testmarking.adapter.rest.dtos.response.UserResponse;
 import com.example.testmarking.common.component.AccountCodeGenerator;
+import com.example.testmarking.domain.entities.PasswordResetCode;
 import com.example.testmarking.domain.entities.Student;
 import com.example.testmarking.domain.entities.User;
 import com.example.testmarking.domain.entities.VerificationCode;
@@ -26,6 +28,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -43,6 +47,13 @@ public class AuthAdapter implements UserPort {
     private final AccountCodeGenerator accountCodeGenerator;
     private final EmailAdapter emailService;
     private final JwtService jwtService;
+    private final PasswordResetCodeRepository passwordResetCodeRepository;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int RESET_CODE_MINUTES = 5;
+    private static final int RESET_TOKEN_MINUTES = 10;
+    private static final int RESET_RESEND_SECONDS = 60;
+    private static final int RESET_MAX_ATTEMPTS = 5;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -274,5 +285,100 @@ public class AuthAdapter implements UserPort {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+    @Override
+    @Transactional
+    public void requestPasswordReset(String email) {
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Vui lòng nhập email");
+        }
+        User user = userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new RuntimeException("Email chưa được đăng ký trong hệ thống"));
+        if (user.getStatus() == UserStatus.SUSPENSE) {
+            throw new RuntimeException("Tài khoản đã bị cấm");
+        }
+
+        var last = passwordResetCodeRepository.findFirstByUserOrderByCreatedAtDesc(user);
+        if (last.isPresent()) {
+            long waited = Duration.between(last.get().getCreatedAt(), LocalDateTime.now()).getSeconds();
+            if (waited < RESET_RESEND_SECONDS) {
+                throw new RuntimeException("Vui lòng đợi " + (RESET_RESEND_SECONDS - waited) + " giây rồi gửi lại mã");
+            }
+        }
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        // a new request replaces the old one, so only the newest code works
+        passwordResetCodeRepository.deleteByUser(user);
+        passwordResetCodeRepository.flush();
+        LocalDateTime now = LocalDateTime.now();
+        passwordResetCodeRepository.save(PasswordResetCode.builder()
+                .user(user)
+                .code(code)
+                .attempts(0)
+                .createdAt(now)
+                .expiryDate(now.plusMinutes(RESET_CODE_MINUTES))
+                .build());
+        emailService.sendPasswordResetEmail(user.getEmail(), code);
+    }
+
+    @Override
+    @Transactional
+    public String verifyPasswordResetCode(String email, String code) {
+        User user = findUserByEmail(email);
+        PasswordResetCode request = passwordResetCodeRepository.findFirstByUserOrderByCreatedAtDesc(user)
+                .orElseThrow(() -> new RuntimeException("Bạn chưa yêu cầu đặt lại mật khẩu"));
+
+        if (request.getResetToken() != null || request.getExpiryDate().isBefore(LocalDateTime.now())) {
+            passwordResetCodeRepository.delete(request);
+            throw new RuntimeException("Mã đã hết hạn, vui lòng gửi lại mã mới");
+        }
+        if (code == null || !request.getCode().equals(code.trim())) {
+            request.setAttempts(request.getAttempts() + 1);
+            if (request.getAttempts() >= RESET_MAX_ATTEMPTS) {
+                passwordResetCodeRepository.delete(request);
+                throw new RuntimeException("Nhập sai quá nhiều lần, vui lòng gửi lại mã mới");
+            }
+            passwordResetCodeRepository.save(request);
+            throw new RuntimeException("Mã xác nhận không đúng");
+        }
+
+        String token = java.util.UUID.randomUUID().toString().replace("-", "")
+                + java.util.UUID.randomUUID().toString().replace("-", "");
+        request.setResetToken(token);
+        request.setExpiryDate(LocalDateTime.now().plusMinutes(RESET_TOKEN_MINUTES));
+        passwordResetCodeRepository.save(request);
+        return token;
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String email, String resetToken, String newPassword) {
+        User user = findUserByEmail(email);
+        PasswordResetCode request = passwordResetCodeRepository.findFirstByUserOrderByCreatedAtDesc(user)
+                .orElseThrow(() -> new RuntimeException("Phiên đặt lại mật khẩu không hợp lệ"));
+
+        if (request.getResetToken() == null || resetToken == null || !request.getResetToken().equals(resetToken)) {
+            throw new RuntimeException("Phiên đặt lại mật khẩu không hợp lệ");
+        }
+        if (request.getExpiryDate().isBefore(LocalDateTime.now())) {
+            passwordResetCodeRepository.delete(request);
+            throw new RuntimeException("Phiên đặt lại mật khẩu đã hết hạn, vui lòng làm lại");
+        }
+        if (newPassword == null || newPassword.length() < 8
+                || !newPassword.matches(".*[A-Za-z].*") || !newPassword.matches(".*[0-9].*")) {
+            throw new RuntimeException("Mật khẩu phải có ít nhất 8 ký tự, gồm cả chữ và số");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordResetCodeRepository.deleteByUser(user);
+    }
+
+    private User findUserByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Thiếu email");
+        }
+        return userRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new RuntimeException("Email chưa được đăng ký trong hệ thống"));
     }
 }

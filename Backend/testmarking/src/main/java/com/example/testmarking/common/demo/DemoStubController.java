@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * DEMO ONLY (demo.enabled=true). The ExamHub shell asks for a dashboard right after login; your Spring
+ * DEMO ONLY (demo.enabled=true). The web app asks for a dashboard right after login; the Spring
  * backend has no such endpoints yet, so the app would show errors. These answers are empty/zero on purpose.
  * Delete this file when the real endpoints exist.
  */

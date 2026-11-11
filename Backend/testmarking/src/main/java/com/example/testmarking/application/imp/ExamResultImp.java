@@ -3,6 +3,7 @@ package com.example.testmarking.application.imp;
 import com.example.testmarking.adapter.persistance.repository.*;
 import com.example.testmarking.adapter.rest.dtos.request.ResultAnswerRequest;
 import com.example.testmarking.adapter.rest.dtos.request.ResultRequest;
+import com.example.testmarking.adapter.rest.dtos.request.FlagDecisionRequest;
 import com.example.testmarking.adapter.rest.dtos.request.ViolationRequest;
 import com.example.testmarking.adapter.rest.dtos.response.*;
 import com.example.testmarking.domain.entities.*;
@@ -52,13 +53,14 @@ public class ExamResultImp {
     private final QuestionAnswerRepository questionAnswers;
     private final ClassStudentRepository classStudents;
     private final StudentRepository students;
+    private final ExamAttemptRepository attempts;
     private final StoragePort storage;
     private final String bucket;
     private final Set<String> readyBuckets = new HashSet<>();
 
     public ExamResultImp(ExamImp exams, ExaminationRepository examRepo, ExamResultRepository results, StudentAnswerRepository studentAnswers,
                          TestCodeRepository codes, TestCodeQuestionRepository codeQuestions, QuestionAnswerRepository questionAnswers,
-                         ClassStudentRepository classStudents, StudentRepository students, StoragePort storage,
+                         ClassStudentRepository classStudents, StudentRepository students, ExamAttemptRepository attempts, StoragePort storage,
                          @Value("${storage.buckets.exam-sheets:exam-sheets}") String bucket) {
         this.exams = exams;
         this.examRepo = examRepo;
@@ -69,22 +71,22 @@ public class ExamResultImp {
         this.questionAnswers = questionAnswers;
         this.classStudents = classStudents;
         this.students = students;
+        this.attempts = attempts;
         this.storage = storage;
         this.bucket = bucket;
     }
 
     // ─── statistics ──────────────────────────────────────────────
 
-    /** Teacher: always. Student of the class: only once the results are released. */
+    /** Teacher only: a student sees his own paper, never the score spread of the class. */
     @Transactional(readOnly = true)
     public ExamStatsResponse stats(User me, UUID examId) {
         Examination e = exams.find(examId);
-        boolean teacher = ExamImp.isCreator(me, e);
-        if (!teacher) {
+        if (!ExamImp.isCreator(me, e)) {
             exams.requireStudentAccess(me, e);
-            if (!ExamImp.released(e)) throw notReleased();
+            throw TemplateException.forbidden("Học sinh chỉ xem được bài làm của mình, không xem phổ điểm");
         }
-        return stats(e, teacher);
+        return stats(e, true);
     }
 
     ExamStatsResponse stats(Examination e, boolean teacher) {
@@ -126,9 +128,11 @@ public class ExamResultImp {
     public List<ExamParticipantResponse> participants(User me, UUID examId, boolean submittedOnly) {
         Examination e = exams.requireTeacher(me, examId);
         Map<Long, ExamResult> byStudent = latestByStudent(e);
+        Map<Long, ExamAttempt> attemptOf = new HashMap<>();
+        if (e.getFormat() == ExamFormat.ONLINE) for (ExamAttempt a : attempts.findByExam(e.getId())) attemptOf.put(a.getStudent().getId(), a);
         List<ExamParticipantResponse> out = new ArrayList<>();
         for (ClassStudent cs : classStudents.findRoster(e.getClassEntity().getId())) {
-            ExamParticipantResponse p = participant(cs.getStudent(), byStudent.get(cs.getStudent().getId()));
+            ExamParticipantResponse p = participant(e, cs.getStudent(), byStudent.get(cs.getStudent().getId()), attemptOf.get(cs.getStudent().getId()));
             if (submittedOnly && !p.hasResult()) continue;
             out.add(p);
         }
@@ -165,6 +169,7 @@ public class ExamResultImp {
         ExamResult r = results.findLatestOf(e.getId(), student.getId()).orElse(null);
         boolean submitted = r != null && !NO_SUBMISSION.equals(r.getProcessingStatus());
         if (!released || r == null) return new MyResultResponse(released, submitted, null);
+        if (pendingReview(r)) return new MyResultResponse(true, submitted, null, true);
         return new MyResultResponse(true, submitted, detail(e, r));
     }
 
@@ -215,7 +220,7 @@ public class ExamResultImp {
         }
         ExamResult r = score(e, student, req, SRC_ONLINE, me);
         boolean released = ExamImp.released(e);
-        return new MyResultResponse(released, true, released ? detail(e, r) : null);
+        return myResultOf(e, r);
     }
 
     private ExamResult score(Examination e, Student student, ResultRequest req, String source, User by) {
@@ -278,7 +283,36 @@ public class ExamResultImp {
         r.setTotalCorrect(correct);
         r.setTotalQuestions(paper.size());
         r.setTotalScore(BigDecimal.valueOf(correct).multiply(max).divide(BigDecimal.valueOf(paper.size()), 2, RoundingMode.HALF_UP));
+        OffsetDateTime now = OffsetDateTime.now();
+        r.setGradedAt(now);
+        if (SRC_ONLINE.equals(source)) r.setSyncedAt(now);   // the answers arrive and are marked in the same step
         return results.save(r);
+    }
+
+    /**
+     * Marks the final answers of an ONLINE attempt (called by OnlineExamImp when the phone syncs). The paper keeps the time the
+     * student handed in by the phone's clock; flagged = he left the exam screen where the teacher chose "report only". The paper keeps its real score
+     * until the teacher decides (0 points, minus points or nothing); the student does not see it before that.
+     */
+    @Transactional
+    public ExamResult gradeOnlineAttempt(Examination e, Student student, ResultRequest req, User by, OffsetDateTime clientFinishedAt,
+                                         boolean flagged, String reason) {
+        ExamResult r = score(e, student, req, SRC_ONLINE, by);
+        r.setClientSubmittedAt(clientFinishedAt);
+        if (flagged && !Boolean.TRUE.equals(r.getFlagged())) {
+            r.setFlagged(true);          // only a report: the teacher decides what it costs (decideFlag)
+            r.setFlagReason(reason);
+            r.setFlagDecision(null);
+        }
+        return results.save(r);
+    }
+
+    /** What the student sees of his paper right after it was marked. */
+    MyResultResponse myResultOf(Examination e, ExamResult r) {
+        boolean released = ExamImp.released(e);
+        boolean submitted = !NO_SUBMISSION.equals(r.getProcessingStatus());
+        if (released && pendingReview(r)) return new MyResultResponse(true, submitted, null, true);
+        return new MyResultResponse(released, submitted, released ? detail(e, r) : null);
     }
 
     private TestCode pickCode(Examination e, String number) {
@@ -339,19 +373,63 @@ public class ExamResultImp {
             r.setViolationReason(reason.isEmpty() ? null : reason);
             r.setViolationAt(OffsetDateTime.now());
             r = results.save(r);
-            return participant(student, r);
+            return participant(e, student, r, attemptOf(e, student));
         }
         if (r != null && Boolean.TRUE.equals(r.getViolation())) {
             if (NO_SUBMISSION.equals(r.getProcessingStatus())) {
                 results.delete(r);   // a paper made only to carry the violation
-                return participant(student, null);
+                return participant(e, student, null, attemptOf(e, student));
             }
             r.setViolation(false);
             r.setViolationReason(null);
             r.setViolationAt(null);
             r = results.save(r);
         }
-        return participant(student, r);
+        return participant(e, student, r, attemptOf(e, student));
+    }
+
+    /**
+     * The teacher decides a paper that was reported for leaving the exam screen: ZERO = a violation (0 points), DEDUCT = minus
+     * penalty_points from the real score, DISMISS = nothing. He may change his mind: every call starts from the real marks.
+     */
+    @Transactional
+    public ExamParticipantResponse decideFlag(User me, UUID examId, FlagDecisionRequest req) {
+        Examination e = exams.requireTeacher(me, examId);
+        if (req == null || req.studentId() == null || req.decision() == null) {
+            throw TemplateException.badRequest("Thiếu dữ liệu", "student_id, decision: are required");
+        }
+        Student student = findStudent(e, req.studentId(), null);
+        ExamResult r = results.findLatestOf(e.getId(), student.getId()).orElse(null);
+        if (r == null || !Boolean.TRUE.equals(r.getFlagged())) {
+            throw TemplateException.badRequestWithCode("NOT_FLAGGED", "Bài này không bị báo vi phạm");
+        }
+        String decision = req.decision().trim().toUpperCase(Locale.ROOT);
+        r.setViolation(false);
+        r.setViolationReason(null);
+        r.setViolationAt(null);
+        r.setPenaltyPoints(null);
+        switch (decision) {
+            case "ZERO" -> {
+                r.setViolation(true);
+                r.setViolationReason(r.getFlagReason());
+                r.setViolationAt(OffsetDateTime.now());
+            }
+            case "DEDUCT" -> {
+                BigDecimal p = req.penaltyPoints();
+                if (p == null || p.signum() <= 0) {
+                    throw TemplateException.badRequest("Dữ liệu không hợp lệ", "penalty_points: must be greater than 0");
+                }
+                if (e.getMaxScore() != null && p.compareTo(e.getMaxScore()) > 0) {
+                    throw TemplateException.badRequest("Dữ liệu không hợp lệ", "penalty_points: must not exceed the maximum score");
+                }
+                r.setPenaltyPoints(p.setScale(2, RoundingMode.HALF_UP));
+            }
+            case "DISMISS" -> { }
+            default -> throw TemplateException.badRequest("Dữ liệu không hợp lệ", "decision: ZERO, DEDUCT or DISMISS");
+        }
+        r.setFlagDecision(decision);
+        r = results.save(r);
+        return participant(e, student, r, attemptOf(e, student));
     }
 
     // ─── analysis per question (teacher) ─────────────────────────
@@ -506,11 +584,22 @@ public class ExamResultImp {
         throw TemplateException.notFound("STUDENT_NOT_FOUND", "Học sinh không thuộc lớp của kỳ thi");
     }
 
-    private ExamParticipantResponse participant(Student s, ExamResult r) {
+    ExamAttempt attemptOf(Examination e, Student s) {
+        return e.getFormat() == ExamFormat.ONLINE ? attempts.findOf(e.getId(), s.getId()).orElse(null) : null;
+    }
+
+    /** a = the student's attempt of an ONLINE exam (null = he has not started); ignored for the other formats. */
+    ExamParticipantResponse participant(Examination e, Student s, ExamResult r, ExamAttempt a) {
         boolean has = r != null && !NO_SUBMISSION.equals(r.getProcessingStatus());
+        boolean online = e.getFormat() == ExamFormat.ONLINE;
         return new ExamParticipantResponse(s.getUuid(), s.getStudentCode(), ClassJson.displayName(s.getUser()), s.getUser().getEmail(),
                 has, r == null ? null : r.getUuid(), r == null ? null : score(r), r == null ? null : correct(r),
-                r != null && Boolean.TRUE.equals(r.getViolation()), r == null ? null : r.getCreatedAt());
+                r != null && Boolean.TRUE.equals(r.getViolation()), r == null ? null : r.getCreatedAt(),
+                online ? (a == null ? "NOT_STARTED" : a.getStatus()) : null,
+                online ? (a == null ? 0 : a.getLeftCount()) : null,
+                has ? r.getSyncedAt() : null, has ? r.getGradedAt() : null,
+                r != null && Boolean.TRUE.equals(r.getFlagged()), r == null ? null : r.getFlagReason(),
+                r == null ? null : r.getFlagDecision(), r == null ? null : r.getPenaltyPoints());
     }
 
     private ExamResultRowResponse row(ExamResult r) {
@@ -520,7 +609,9 @@ public class ExamResultImp {
                 r.getTestCode() == null ? null : r.getTestCode().getCodeNumber(), correct(r), r.getTotalQuestions(), score(r), v,
                 v ? r.getViolationReason() : null,
                 firstNonBlank(r.getImageMarkedRustKey(), r.getImageDewarpedRustKey(), r.getImageRawRustKey()) != null,
-                r.getSubmissionSource(), v ? "VIOLATION" : r.getProcessingStatus(), r.getCreatedAt());
+                r.getSubmissionSource(), v ? "VIOLATION" : r.getProcessingStatus(), r.getCreatedAt(),
+                r.getGradedAt(), r.getSyncedAt(), r.getClientSubmittedAt(),
+                Boolean.TRUE.equals(r.getFlagged()), r.getFlagReason(), r.getFlagDecision(), r.getPenaltyPoints());
     }
 
     private ExamResultDetailResponse detail(Examination e, ExamResult r) {
@@ -529,20 +620,43 @@ public class ExamResultImp {
         if (r.getTestCode() != null) {
             Map<Integer, StudentAnswer> given = new HashMap<>();
             if (r.getId() != null) for (StudentAnswer sa : studentAnswers.findByExamResult_IdOrderByQuestionOrder(r.getId())) given.put(sa.getQuestionOrder(), sa);
-            for (TestCodeQuestion tq : codeQuestions.findByCodes(List.of(r.getTestCode().getId()))) {
+            List<TestCodeQuestion> paper = codeQuestions.findByCodes(List.of(r.getTestCode().getId()));
+            Set<Long> questionIds = new HashSet<>();
+            for (TestCodeQuestion tq : paper) questionIds.add(tq.getQuestion().getId());
+            Map<Long, List<QuestionOptionResponse>> optionsOf = new HashMap<>();
+            if (!questionIds.isEmpty()) {
+                List<QuestionAnswer> all = new ArrayList<>(questionAnswers.findByQuestion_IdIn(questionIds));
+                all.sort(Comparator.comparing(QuestionAnswer::getChoiceLabel));
+                for (QuestionAnswer qa : all) {
+                    optionsOf.computeIfAbsent(qa.getQuestion().getId(), k -> new ArrayList<>())
+                            .add(new QuestionOptionResponse(qa.getChoiceLabel(), qa.getContent(), Boolean.TRUE.equals(qa.getIsCorrect())));
+                }
+            }
+            for (TestCodeQuestion tq : paper) {
                 StudentAnswer sa = given.get(tq.getQuestionOrder());
                 // a violation counts as "chose nothing"
                 String choice = v || sa == null ? null : sa.getStudentChoice();
-                out.add(new ResultAnswerResponse(tq.getQuestionOrder(), choice, tq.getCorrectAnswer(), !v && sa != null && Boolean.TRUE.equals(sa.getIsCorrect())));
+                Question q = tq.getQuestion();
+                out.add(new ResultAnswerResponse(tq.getQuestionOrder(), choice, tq.getCorrectAnswer(),
+                        !v && sa != null && Boolean.TRUE.equals(sa.getIsCorrect()),
+                        q.getContent(), optionsOf.getOrDefault(q.getId(), List.of()), q.getExplanation()));
             }
         }
         return new ExamResultDetailResponse(row(r), e.getMaxScore(), out);
     }
 
-    /** Points of a paper: 0 for a violation, null while it is not marked. */
+    /** Reported for leaving the exam screen and the teacher has not decided yet. */
+    static boolean pendingReview(ExamResult r) {
+        return Boolean.TRUE.equals(r.getFlagged()) && r.getFlagDecision() == null;
+    }
+
+    /** Points of a paper: 0 for a violation, the marks minus the teacher's penalty (never below 0), null while it is not marked. */
     static BigDecimal score(ExamResult r) {
         if (Boolean.TRUE.equals(r.getViolation())) return BigDecimal.ZERO.setScale(2);
-        return r.getTotalScore();
+        BigDecimal total = r.getTotalScore();
+        BigDecimal penalty = r.getPenaltyPoints();
+        if (total == null || penalty == null || penalty.signum() <= 0) return total;
+        return total.subtract(penalty).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 
     static Integer correct(ExamResult r) {

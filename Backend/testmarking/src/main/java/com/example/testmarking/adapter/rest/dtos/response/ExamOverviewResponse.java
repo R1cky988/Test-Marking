@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 
-/** Dashboard: what is coming, what is running and what is over (5 each, soonest / newest first) with the totals, and the classes involved. */
+/** Dashboard: what is coming, what is running and what is over (4 each: soonest start / latest end first) with the totals, and the 4 newest classes. */
 public record ExamOverviewResponse(
         @JsonProperty("upcoming_count") int upcomingCount,
         @JsonProperty("ongoing_count") int ongoingCount,

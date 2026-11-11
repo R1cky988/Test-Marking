@@ -22,6 +22,16 @@ public class EmailAdapter implements EmailPort {
     }
 
     @Override
+    public void sendPasswordResetEmail(String toEmail, String code) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Đặt lại mật khẩu TestMarking");
+        message.setText("Mã đặt lại mật khẩu của bạn là: " + code
+                + "\nMã này có hiệu lực trong 5 phút. Nếu bạn không yêu cầu, hãy bỏ qua email này.");
+        mailSender.send(message);
+    }
+
+    @Override
     public void sendAccountEmail(String toEmail, String email, String password) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);

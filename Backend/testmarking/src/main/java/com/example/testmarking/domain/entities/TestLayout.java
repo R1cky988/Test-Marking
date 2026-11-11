@@ -36,13 +36,13 @@ public class TestLayout {
     @Column(nullable = false, length = 200)
     private String name;
 
-    // Exam Hub: version string, bumped when the layout formula or schema changes
+    // version string, bumped when the layout formula or schema changes
     @Builder.Default
     @JsonProperty("version")
     @Column(name = "version", nullable = false, length = 20)
     private String version = "1.0.0";
 
-    // Exam Hub: STANDARD / CUSTOM / LEGACY
+    // STANDARD / CUSTOM / LEGACY
     @Builder.Default
     @JsonProperty("template_type")
     @Column(name = "template_type", nullable = false, length = 20)
@@ -70,7 +70,7 @@ public class TestLayout {
     @Builder.Default @Column(name = "canvas_height", nullable = false)
     private Integer canvasHeight = 1169;
 
-    // Exam Hub's two JSON columns
+    // the two JSON columns
     @JsonProperty("anchor_points") @JsonRawValue   // the column already holds JSON text
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "anchor_points", columnDefinition = "jsonb", nullable = false)
@@ -89,7 +89,7 @@ public class TestLayout {
     @Column(name = "choices_per_question", nullable = false)
     private Integer choicesPerQuestion;
 
-    // So an old scanner can refuse a layout it can't read (Exam Hub columns)
+    // So an old scanner can refuse a layout it can't read
     @JsonProperty("compatibility_hash")
     @Column(name = "compatibility_hash", length = 64)
     private String compatibilityHash;
@@ -126,5 +126,12 @@ public class TestLayout {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    /** "Mã phiếu" printed on the sheet: the template id, at least two digits (1 -> 01). Not stored. */
+    @JsonProperty("sheet_code")
+    @Transient
+    public String getSheetCode() {
+        return com.example.testmarking.template.SheetCode.of(id);
     }
 }

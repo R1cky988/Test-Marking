@@ -22,6 +22,17 @@ public record ExamResultRowResponse(
         @JsonProperty("has_image") boolean hasImage,
         @JsonProperty("source") String source,
         @JsonProperty("status") String status,
-        @JsonProperty("submitted_at") OffsetDateTime submittedAt
+        @JsonProperty("submitted_at") OffsetDateTime submittedAt,
+        /** when the system marked the paper */
+        @JsonProperty("graded_at") OffsetDateTime gradedAt,
+        /** ONLINE: when the phone's answers reached the server */
+        @JsonProperty("synced_at") OffsetDateTime syncedAt,
+        /** ONLINE: when the student handed in, by the phone's clock (differs from synced_at when he was offline) */
+        @JsonProperty("client_submitted_at") OffsetDateTime clientSubmittedAt,
+        /** ONLINE: he left the exam screen and the teacher chose "report only"; flag_decision tells what the teacher decided (null = not yet) */
+        @JsonProperty("is_flagged") boolean flagged,
+        @JsonProperty("flag_reason") String flagReason,
+        @JsonProperty("flag_decision") String flagDecision,
+        @JsonProperty("penalty_points") BigDecimal penaltyPoints
 ) {
 }

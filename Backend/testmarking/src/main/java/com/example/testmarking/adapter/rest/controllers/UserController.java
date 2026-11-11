@@ -1,6 +1,7 @@
 package com.example.testmarking.adapter.rest.controllers;
 
 import com.example.testmarking.adapter.rest.dtos.request.*;
+import com.example.testmarking.adapter.rest.dtos.response.ResetTokenResponse;
 import com.example.testmarking.common.ApiResponse;
 import com.example.testmarking.domain.ports.UserPort;
 import lombok.RequiredArgsConstructor;
@@ -159,6 +160,63 @@ public class UserController {
                     .status(1)
                     .message("Xác thực email thành công")
                     .data(userPort.verifyEmail(request.getEmail(), request.getCode()))
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(0)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build());
+        }
+    }
+    /** Forgot password, step 1. 400 with a message when the e-mail is unknown or a code was sent a moment ago. */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            userPort.requestPasswordReset(request.getEmail());
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(1)
+                    .message("Đã gửi mã đặt lại mật khẩu")
+                    .data(null)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(0)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build());
+        }
+    }
+
+    /** Step 2: { email, code } -> { resetToken }. */
+    @PostMapping("/forgot-password/verify")
+    public ResponseEntity<?> verifyResetCode(@RequestBody VerifyResetCodeRequest request) {
+        try {
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(1)
+                    .message("Mã hợp lệ")
+                    .data(ResetTokenResponse.builder()
+                            .resetToken(userPort.verifyPasswordResetCode(request.getEmail(), request.getCode()))
+                            .build())
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.builder()
+                    .status(0)
+                    .message(e.getMessage())
+                    .data(null)
+                    .build());
+        }
+    }
+
+    /** Step 3: { email, resetToken, newPassword }. */
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            userPort.resetPassword(request.getEmail(), request.getResetToken(), request.getNewPassword());
+            return ResponseEntity.ok(ApiResponse.builder()
+                    .status(1)
+                    .message("Đặt lại mật khẩu thành công")
+                    .data(null)
                     .build());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.builder()

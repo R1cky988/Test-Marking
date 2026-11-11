@@ -18,13 +18,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Dashboard: the exams that are coming, running and over (5 of each, with the totals), the classes involved
- * (the ones I teach and the ones I study in) and, for a teacher, how many drafts are waiting.
+ * Dashboard: the exams that are coming, running and over (4 of each, with the totals), the 4 newest classes
+ * (the ones I teach and the ones I study in, with their total) and, for a teacher, how many drafts are waiting.
  */
 @Service
 public class ExamOverviewImp {
 
-    public static final int LIMIT = 5;
+    public static final int LIMIT = 4;
 
     private final ExaminationRepository exams;
     private final ClassRepository classes;
@@ -52,15 +52,20 @@ public class ExamOverviewImp {
         Comparator<OffsetDateTime> soonest = Comparator.nullsLast(Comparator.naturalOrder());
         Comparator<OffsetDateTime> latest = Comparator.nullsLast(Comparator.reverseOrder());
 
+        List<Class> mine = new ArrayList<>(classes.findOwned(me.getId(), 1, "", PageRequest.of(0, 50)).getContent());
+        List<Class> joined = new ArrayList<>(classes.findJoined(me.getId(), "", PageRequest.of(0, 50)).getContent());
+        Set<Long> ownedIds = mine.stream().map(Class::getId).collect(Collectors.toSet());
+        List<Class> all = new ArrayList<>(mine);
+        all.addAll(joined);
+        // the newest classes first (created_at is a date, so the id breaks the tie), 4 of them
+        all.sort(Comparator.comparing(Class::getCreatedAt, Comparator.nullsLast(Comparator.<java.time.LocalDate>reverseOrder()))
+                .thenComparing(Class::getId, Comparator.nullsLast(Comparator.<Long>reverseOrder())));
         List<OverviewClassResponse> related = new ArrayList<>();
-        for (Class c : classes.findOwned(me.getId(), 1, "", PageRequest.of(0, 50)).getContent()) {
-            related.add(new OverviewClassResponse(c.getUuid(), c.getName(), ClassAccessImp.TEACHER));
-        }
-        for (Class c : classes.findJoined(me.getId(), "", PageRequest.of(0, 50)).getContent()) {
-            related.add(new OverviewClassResponse(c.getUuid(), c.getName(), ClassAccessImp.STUDENT));
+        for (Class c : all.stream().limit(LIMIT).collect(Collectors.toList())) {
+            related.add(new OverviewClassResponse(c.getUuid(), c.getName(), ownedIds.contains(c.getId()) ? ClassAccessImp.TEACHER : ClassAccessImp.STUDENT));
         }
         return new ExamOverviewResponse(upcoming.size(), ongoing.size(), completed.size(),
-                exams.countByCreatedUser_IdAndStatus(me.getId(), ExamStatus.DRAFT), related.size(),
+                exams.countByCreatedUser_IdAndStatus(me.getId(), ExamStatus.DRAFT), all.size(),
                 top(upcoming, Comparator.comparing(Examination::getFromTime, soonest), me, ExamStatus.UPCOMING),
                 top(ongoing, Comparator.comparing(Examination::getToTime, soonest), me, ExamStatus.ONGOING),
                 top(completed, Comparator.comparing(Examination::getToTime, latest), me, ExamStatus.COMPLETED),

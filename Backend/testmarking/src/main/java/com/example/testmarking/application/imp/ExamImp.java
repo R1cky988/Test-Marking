@@ -291,7 +291,9 @@ public class ExamImp {
     @Transactional(readOnly = true)
     public ExamPrintResponse print(User me, UUID examId) {
         Examination e = requireOwned(me, examId);
-        return new ExamPrintResponse(e.getUuid(), e.getExamName(), details(codes.findByExamination_IdOrderByCodeNumberAsc(e.getId())));
+        TestLayout sheet = e.getTestLayout();
+        return new ExamPrintResponse(e.getUuid(), e.getExamName(),
+                sheet == null ? null : sheet.getName(), sheet == null ? null : sheet.getSheetCode(), details(codes.findByExamination_IdOrderByCodeNumberAsc(e.getId())));
     }
 
     // ─── helpers ─────────────────────────────────────────────────
@@ -378,6 +380,10 @@ public class ExamImp {
         e.setQuestionBank(bank);
         // only ONLINE may show the result at once (default yes); OFFLINE and SUBMIT never do
         e.setShowResultImmediately(format == ExamFormat.ONLINE && !Boolean.FALSE.equals(req.showResultImmediately()));
+        // open book is an ONLINE-only switch and is off unless the teacher turns it on
+        e.setAllowReference(format == ExamFormat.ONLINE && Boolean.TRUE.equals(req.allowReference()));
+        // what leaving the exam screen does only matters for ONLINE without open book
+        e.setLeavePolicy(OnlineExamRules.normalizePolicy(req.leavePolicy()));
     }
 
     /** Fewer questions than the sheet has is fine (the spare rows stay blank); more is impossible. */
@@ -453,7 +459,9 @@ public class ExamImp {
                 layout == null ? null : layout.getUuid(), layout == null ? null : layout.getName(), layout == null ? null : layout.getTotalQuestions(),
                 bank == null ? null : bank.getUuid(), bank == null ? null : bank.getName(),
                 (int) versions, e1, m, h, versions > 0 ? e1 + m + h : 0,
-                immediate, immediate ? "IMMEDIATE" : "AFTER_TEACHER_PUBLISH", Boolean.TRUE.equals(e.getIsScorePublished()),
+                immediate, e.getFormat() == ExamFormat.ONLINE && Boolean.TRUE.equals(e.getAllowReference()),
+                OnlineExamRules.normalizePolicy(e.getLeavePolicy()),
+                immediate ? "IMMEDIATE" : "AFTER_TEACHER_PUBLISH", Boolean.TRUE.equals(e.getIsScorePublished()),
                 released(e), "TEACHER", e.getCreatedAt());
     }
 
@@ -462,7 +470,7 @@ public class ExamImp {
         ExamResponse r = response(e);
         return new ExamResponse(r.id(), r.name(), r.subject(), r.classId(), r.className(), r.format(), r.status(), r.fromTime(), r.toTime(),
                 r.durationMinutes(), r.maxScore(), null, null, null, null, null, 0, 0, 0, 0, 0,
-                r.showResultImmediately(), r.resultPolicy(), r.isScorePublished(), r.resultsReleased(), "STUDENT", r.createdAt());
+                r.showResultImmediately(), r.allowReference(), r.leavePolicy(), r.resultPolicy(), r.isScorePublished(), r.resultsReleased(), "STUDENT", r.createdAt());
     }
 
     private static ExamFormat parseFormat(String s) {

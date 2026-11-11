@@ -6,7 +6,7 @@ import java.util.List;
  * Plain (annotation-free) model of the OMR template JSON stored in test_layouts.grid_config.
  *
  * Serialize/deserialize with a Jackson ObjectMapper configured with SNAKE_CASE naming so the
- * stored JSON keeps the exact keys used by Exam Hub and the Android scanner
+ * stored JSON keeps the exact keys used by the Android scanner
  * (anchor_points, bounding_box, has_start_number, start_question_index, num_digits, ...).
  */
 public final class TemplateModel {

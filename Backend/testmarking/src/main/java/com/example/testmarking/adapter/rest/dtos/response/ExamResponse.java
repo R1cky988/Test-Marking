@@ -33,6 +33,8 @@ public record ExamResponse(
         @JsonProperty("hard") int hard,
         @JsonProperty("questions_per_version") int questionsPerVersion,
         @JsonProperty("show_result_immediately") boolean showResultImmediately,
+        @JsonProperty("allow_reference") boolean allowReference,
+        @JsonProperty("leave_policy") String leavePolicy,
         @JsonProperty("result_policy") String resultPolicy,
         @JsonProperty("is_score_published") boolean isScorePublished,
         @JsonProperty("results_released") boolean resultsReleased,

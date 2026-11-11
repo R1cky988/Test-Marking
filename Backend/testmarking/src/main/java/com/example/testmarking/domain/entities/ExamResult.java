@@ -93,6 +93,35 @@ public class ExamResult {
     @Column(name = "violation_at")
     private OffsetDateTime violationAt;
 
+    /**
+     * ONLINE: the student left the exam screen where the teacher chose "go on, but report it". Only a report: the teacher then
+     * decides (flag_decision): ZERO = 0 points (a violation), DEDUCT = minus penalty_points, DISMISS = nothing. null = not decided yet.
+     */
+    @Builder.Default
+    @Column(name = "is_flagged", nullable = false, columnDefinition = "boolean default false")
+    private Boolean flagged = false;
+
+    @Column(name = "flag_reason", length = 500)
+    private String flagReason;
+
+    @Column(name = "flag_decision", length = 10)
+    private String flagDecision;
+
+    @Column(name = "penalty_points", precision = 6, scale = 2)
+    private BigDecimal penaltyPoints;
+
+    /** When the system marked the paper. */
+    @Column(name = "graded_at")
+    private OffsetDateTime gradedAt;
+
+    /** ONLINE: when the answers reached the server (the phone may have worked offline before). */
+    @Column(name = "synced_at")
+    private OffsetDateTime syncedAt;
+
+    /** ONLINE: when the student handed in according to the phone's clock. */
+    @Column(name = "client_submitted_at")
+    private OffsetDateTime clientSubmittedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -119,6 +148,9 @@ public class ExamResult {
         }
         if (this.violation == null) {
             this.violation = false;
+        }
+        if (this.flagged == null) {
+            this.flagged = false;
         }
     }
 

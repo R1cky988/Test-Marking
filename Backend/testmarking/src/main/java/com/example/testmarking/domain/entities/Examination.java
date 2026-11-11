@@ -87,6 +87,17 @@ public class Examination {
     @Column(name = "show_result_immediately", nullable = false, columnDefinition = "boolean default true")
     private Boolean showResultImmediately = true;
 
+    /** ONLINE only: the student may use documents, so leaving the exam screen is not a violation. Always false for OFFLINE and SUBMIT. */
+    @Column(name = "allow_reference", nullable = false, columnDefinition = "boolean default false")
+    private Boolean allowReference = false;
+
+    /**
+     * ONLINE without open book: what happens when the student leaves the exam screen. FLAG = he may go on but the paper is flagged
+     * as a violation (0 points, the teacher can undo it); LOCK = the exam locks until the teacher unlocks it.
+     */
+    @Column(name = "leave_policy", nullable = false, length = 10, columnDefinition = "varchar(10) default 'FLAG'")
+    private String leavePolicy = "FLAG";
+
     // Cờ kiểm soát công bố điểm (Examxy policy)
     @Column(name = "is_score_published", nullable = false)
     private Boolean isScorePublished = false;
@@ -117,6 +128,12 @@ public class Examination {
         }
         if (this.showResultImmediately == null) {
             this.showResultImmediately = true;
+        }
+        if (this.allowReference == null) {
+            this.allowReference = false;
+        }
+        if (this.leavePolicy == null) {
+            this.leavePolicy = "FLAG";
         }
     }
 

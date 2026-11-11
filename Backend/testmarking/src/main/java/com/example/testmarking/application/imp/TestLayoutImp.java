@@ -196,14 +196,14 @@ public class TestLayoutImp {
     @Transactional(readOnly = true)
     public String getTemplateImage(User teacher, UUID templateId) {
         TestLayout layout = requireOwned(teacher, templateId);
-        return SvgWriter.write(sheetBuilder.build(requireRenderable(layout)));
+        return SvgWriter.write(sheetBuilder.build(requireRenderable(layout), layout.getSheetCode()));
     }
 
     @Transactional(readOnly = true)
     public Asset downloadTemplateAsset(User teacher, UUID templateId) {
         TestLayout layout = requireOwned(teacher, templateId);
         try {
-            byte[] pdf = PdfWriter.write(sheetBuilder.build(requireRenderable(layout)));
+            byte[] pdf = PdfWriter.write(sheetBuilder.build(requireRenderable(layout), layout.getSheetCode()));
             return new Asset(pdf, slugify(layout.getName()) + "_Phieu_Tra_Loi_OMR.pdf", "application/pdf");
         } catch (IOException e) {
             throw new IllegalStateException("Cannot render template PDF", e);

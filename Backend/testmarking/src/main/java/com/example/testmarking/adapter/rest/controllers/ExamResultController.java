@@ -1,6 +1,7 @@
 package com.example.testmarking.adapter.rest.controllers;
 
 import com.example.testmarking.adapter.rest.dtos.request.ResultRequest;
+import com.example.testmarking.adapter.rest.dtos.request.FlagDecisionRequest;
 import com.example.testmarking.adapter.rest.dtos.request.ViolationRequest;
 import com.example.testmarking.adapter.rest.dtos.response.*;
 import com.example.testmarking.application.imp.ExamOverviewImp;
@@ -135,6 +136,13 @@ public class ExamResultController {
     public ApiResponse<ExamParticipantResponse> setViolation(@AuthenticationPrincipal SecurityUser me, @PathVariable("examId") UUID examId,
                                                              @RequestBody ViolationRequest body) {
         return ok(service.setViolation(me.getUser(), examId, body));
+    }
+
+    /** { student_id, decision: ZERO|DEDUCT|DISMISS, penalty_points }: what a paper reported for leaving the exam screen costs. */
+    @PutMapping("/{examId}/flags")
+    public ApiResponse<ExamParticipantResponse> decideFlag(@AuthenticationPrincipal SecurityUser me, @PathVariable("examId") UUID examId,
+                                                           @RequestBody FlagDecisionRequest body) {
+        return ok(service.decideFlag(me.getUser(), examId, body));
     }
 
     @GetMapping("/{examId}/analysis")
