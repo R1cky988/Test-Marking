@@ -73,11 +73,11 @@ const DEFAULT_FIXED_ZONE_ITEMS: OmrFixedZoneItem[] = [
 /** Default ID zone items */
 const DEFAULT_ID_ZONE_ITEMS: OmrIdZoneItem[] = [
   { type: "student_id", enabled: true, num_digits: 8 },
-  { type: "class_code", enabled: true, num_digits: 5 },
+  { type: "class_code", enabled: false, num_digits: 5 },
   { type: "exam_code", enabled: true, num_digits: 3 },
 ];
 
-/** Student codes are HSxxxxxxxx and exam codes use 3 cells: both are fixed, always on. */
+/** Student codes are HSxxxxxxxx and exam codes use 3 cells: both are fixed, always on. The sheet has no class-code boxes (the class is known from the exam): that item is always off and not shown. */
 const FIXED_ID_DIGITS: Record<string, number> = { student_id: 8, exam_code: 3 };
 
 function lockIdZoneItems(items: OmrIdZoneItem[]): OmrIdZoneItem[] {
@@ -85,6 +85,7 @@ function lockIdZoneItems(items: OmrIdZoneItem[]): OmrIdZoneItem[] {
   return DEFAULT_ID_ZONE_ITEMS.map((def) => {
     const fixed = FIXED_ID_DIGITS[def.type];
     const current = byType.get(def.type) ?? def;
+    if (def.type === "class_code") return { ...current, enabled: false };
     return fixed ? { ...current, enabled: true, num_digits: fixed } : current;
   });
 }
@@ -1094,6 +1095,7 @@ export function OMRTemplateDesigner({
                     <AccordionContent>
                       <div className="space-y-4 pt-2">
                         {idZoneItems.map((item, idx) => {
+                          if (item.type === "class_code") return null;
                           const label =
                             item.type === "student_id"
                               ? t("omr.studentId")

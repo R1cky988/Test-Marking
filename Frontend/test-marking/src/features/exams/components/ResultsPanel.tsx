@@ -38,7 +38,7 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
         <div className="overflow-x-auto rounded-2xl border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr><th className="px-4 py-3">{t("exam.col.name", "Họ tên")}</th><th className="px-4 py-3">{t("exam.col.code", "Mã số")}</th><th className="px-4 py-3">{t("exam.versionLabel", "Mã đề")}</th><th className="px-4 py-3">{t("exam.export.classCode", "Mã lớp")}</th><th className="px-4 py-3 text-right">{t("exam.result.correct", "Số câu đúng")}</th><th className="px-4 py-3 text-right">{t("exam.result.score", "Điểm")}</th><th className="px-4 py-3">{t("exam.result.gradedAt", "Ngày giờ chấm")}</th>{exam.format === "ONLINE" && <th className="px-4 py-3">{t("exam.result.syncedAt", "Đồng bộ lên hệ thống")}</th>}<th className="px-4 py-3" /></tr>
+              <tr><th className="px-4 py-3">{t("exam.col.name", "Họ tên")}</th><th className="px-4 py-3">{t("exam.col.code", "Mã số")}</th><th className="px-4 py-3">{t("exam.versionLabel", "Mã đề")}</th><th className="px-4 py-3">{t("exam.export.className", "Lớp")}</th><th className="px-4 py-3 text-right">{t("exam.result.correct", "Số câu đúng")}</th><th className="px-4 py-3 text-right">{t("exam.result.score", "Điểm")}</th><th className="px-4 py-3">{t("exam.result.gradedAt", "Ngày giờ chấm")}</th>{exam.format === "ONLINE" && <th className="px-4 py-3">{t("exam.result.syncedAt", "Đồng bộ lên hệ thống")}</th>}<th className="px-4 py-3" /></tr>
             </thead>
             <tbody className="divide-y">
               {rows.map((r) => (
@@ -46,7 +46,7 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
                   <td className="px-4 py-3 font-medium"><button type="button" className="text-left hover:text-primary focus-visible:outline-2" onClick={(e) => { e.stopPropagation(); onOpen(r); }}>{r.full_name}</button></td>
                   <td className="px-4 py-3 font-mono text-xs">{r.student_code}</td>
                   <td className="px-4 py-3 tabular-nums">{r.test_code ?? "—"}</td>
-                  <td className="px-4 py-3 tabular-nums">{r.class_code ?? "—"}</td>
+                  <td className="px-4 py-3 tabular-nums">{r.class_name ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.total_correct ?? 0}/{r.total_questions ?? "—"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{scoreText(r.total_score)}</td>
                   <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">{timeText(r.graded_at ?? r.submitted_at)}</td>

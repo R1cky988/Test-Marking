@@ -8,7 +8,7 @@ const row = (o: Partial<ResultRow>): ResultRow => ({
 
 describe("export rows", () => {
   it("keeps code, version, right answers and score", () => {
-    expect(exportRows([row({})])).toEqual([{ code: "HS00000001", name: "Nguyen A", version: "418", correct: 3, questions: 4, score: 7.5, violation: "" }]);
+    expect(exportRows([row({})])).toEqual([{ code: "HS00000001", name: "Nguyen A", version: "418", className: "", correct: 3, questions: 4, score: 7.5, violation: "" }]);
   });
   it("flags a violation with its reason", () => {
     expect(exportRows([row({ is_violation: true, violation_reason: "Dùng tài liệu", total_score: 0, total_correct: 0 })])[0].violation).toBe("Dùng tài liệu");

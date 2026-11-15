@@ -250,7 +250,7 @@ export interface Participant {
   synced_at?: string | null;
   graded_at?: string | null;
   test_code?: string | null;
-  class_code?: string | null;
+  class_name?: string | null;
   total_questions?: number | null;
 }
 
@@ -261,7 +261,7 @@ export interface ResultRow {
   full_name: string;
   test_code: string | null;
   /** the class code written on the sheet */
-  class_code?: string | null;
+  class_name?: string | null;
   total_correct: number | null;
   total_questions: number | null;
   total_score: number | null;
@@ -371,18 +371,18 @@ export const scoreText = (v: number | null | undefined) => (v == null ? "—" : 
 /** Rows for the export: student code (HSxxxxxxxx), version, class code, total score, right answers. A violation is 0 points. */
 export function exportRows(rows: ResultRow[]) {
   return rows.map((r) => ({
-    code: r.student_code, name: r.full_name, version: r.test_code ?? "", classCode: r.class_code ?? "", correct: r.total_correct ?? 0,
+    code: r.student_code, name: r.full_name, version: r.test_code ?? "", className: r.class_name ?? "", correct: r.total_correct ?? 0,
     questions: r.total_questions ?? 0, score: r.is_violation ? 0 : (r.total_score ?? 0), violation: r.is_violation ? (r.violation_reason || "Vi phạm") : "",
   }));
 }
 
-export const EXPORT_HEADERS = ["Mã số học sinh", "Mã đề", "Mã lớp", "Tổng điểm bài làm", "Số câu đúng"] as const;
+export const EXPORT_HEADERS = ["Mã số học sinh", "Mã đề", "Tên lớp", "Tổng điểm bài làm", "Số câu đúng"] as const;
 
-/** Excel (any format, no photos): Mã số học sinh, Mã đề, Mã lớp, Tổng điểm bài làm, Số câu đúng. */
+/** Excel (any format, no photos): Mã số học sinh, Mã đề, Tên lớp, Tổng điểm bài làm, Số câu đúng. */
 export async function downloadExamExcel(examName: string, rows: ResultRow[]) {
   const XLSX = await import("xlsx");
   const data = [[...EXPORT_HEADERS],
-    ...exportRows(rows).map((r) => [r.code, r.version, r.classCode, r.score, r.correct])];
+    ...exportRows(rows).map((r) => [r.code, r.version, r.className, r.score, r.correct])];
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();

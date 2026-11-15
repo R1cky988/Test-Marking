@@ -76,7 +76,7 @@ export function ExamExportPage() {
           <thead><tr><th>{t("exam.col.stt", "STT")}</th><th>{EXPORT_HEADERS[0]}</th><th>{EXPORT_HEADERS[1]}</th><th>{EXPORT_HEADERS[2]}</th><th>{EXPORT_HEADERS[3]}</th><th>{EXPORT_HEADERS[4]}</th></tr></thead>
           <tbody>
             {flat.map((r, i) => (
-              <tr key={r.code}><td>{i + 1}</td><td style={{ fontFamily: "monospace" }}>{r.code}</td><td>{r.version}</td><td>{r.classCode}</td><td><strong>{scoreText(r.score)}</strong></td><td>{r.correct}/{r.questions}</td></tr>
+              <tr key={r.code}><td>{i + 1}</td><td style={{ fontFamily: "monospace" }}>{r.code}</td><td>{r.version}</td><td>{r.className}</td><td><strong>{scoreText(r.score)}</strong></td><td>{r.correct}/{r.questions}</td></tr>
             ))}
           </tbody>
         </table>

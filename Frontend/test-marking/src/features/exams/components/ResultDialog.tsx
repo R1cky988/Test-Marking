@@ -133,7 +133,7 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {[
                 [t("exam.versionLabel", "Mã đề"), row.test_code ?? "—"],
-                ...(row.class_code ? [[t("exam.export.classCode", "Mã lớp"), row.class_code]] : []),
+                ...(row.class_name ? [[t("exam.export.className", "Lớp"), row.class_name]] : []),
                 [t("exam.result.correct", "Số câu đúng"), `${row.total_correct ?? 0}/${row.total_questions ?? 0}`],
                 [t("exam.result.score", "Điểm"), `${scoreText(row.total_score)}/${scoreText(data.max_score)}`],
                 [t("exam.result.status", "Trạng thái"), row.is_violation ? t("exam.violation.label", "Vi phạm") : t("exam.result.ok", "Hợp lệ")],
