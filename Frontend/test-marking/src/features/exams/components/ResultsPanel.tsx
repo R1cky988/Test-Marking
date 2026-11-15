@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
 import { downloadExamExcel, getResults, scoreText, timeText, type Exam, type ResultRow } from "../examsSpring.api";
 
-/** "Chi tiết bài thi": one line per paper (name, code, right answers, score; a violation is flagged at the end). Export: PDF with photos for paper exams, Excel for ONLINE. */
+/** "Chi tiết bài thi": one line per paper (name, code, right answers, score; a violation is flagged at the end). Export: Excel and PDF table for every exam, PDF with photos for paper exams. */
 export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (r: ResultRow) => void; onRecord: () => void }) {
   const { t } = useTranslation();
   const list = useQuery({ queryKey: ["exam", exam.id, "results"], queryFn: () => getResults(exam.id) });
@@ -27,11 +27,9 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
         <p className="text-sm text-muted-foreground">{t("exam.results.count", "{{n}} bài thi", { n: rows.length })}</p>
         <div className="flex flex-wrap gap-2">
           {exam.status !== "DRAFT" && <Button type="button" variant="outline" size="sm" className="gap-2" onClick={onRecord}><Pencil className="h-4 w-4" />{t("exam.record.open", "Nhập bài làm")}</Button>}
-          {paper ? (
-            <Button asChild variant="outline" size="sm" className="gap-2"><Link to={`/exams/${exam.id}/export`}><FileText className="h-4 w-4" />{t("exam.export.pdf", "Xuất PDF (có ảnh)")}</Link></Button>
-          ) : (
-            <Button type="button" variant="outline" size="sm" className="gap-2" disabled={rows.length === 0} onClick={() => void excel()}><Sheet className="h-4 w-4" />{t("exam.export.excel", "Xuất Excel")}</Button>
-          )}
+          <Button type="button" variant="outline" size="sm" className="gap-2" disabled={rows.length === 0} onClick={() => void excel()}><Sheet className="h-4 w-4" />{t("exam.export.excel", "Xuất Excel")}</Button>
+          <Button asChild variant="outline" size="sm" className="gap-2"><Link to={`/exams/${exam.id}/export`}><FileText className="h-4 w-4" />{t("exam.export.pdf", "Xuất PDF")}</Link></Button>
+          {paper && <Button asChild variant="outline" size="sm" className="gap-2"><Link to={`/exams/${exam.id}/export?photos=1`}><ImageIcon className="h-4 w-4" />{t("exam.export.pdfPhotos", "PDF kèm ảnh")}</Link></Button>}
         </div>
       </div>
       {list.isLoading ? <Skeleton className="h-56 rounded-2xl" /> : list.isError ? (
@@ -40,7 +38,7 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
         <div className="overflow-x-auto rounded-2xl border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr><th className="px-4 py-3">{t("exam.col.name", "Họ tên")}</th><th className="px-4 py-3">{t("exam.col.code", "Mã số")}</th><th className="px-4 py-3">{t("exam.versionLabel", "Mã đề")}</th><th className="px-4 py-3 text-right">{t("exam.result.correct", "Số câu đúng")}</th><th className="px-4 py-3 text-right">{t("exam.result.score", "Điểm")}</th><th className="px-4 py-3">{t("exam.result.gradedAt", "Ngày giờ chấm")}</th>{exam.format === "ONLINE" && <th className="px-4 py-3">{t("exam.result.syncedAt", "Đồng bộ lên hệ thống")}</th>}<th className="px-4 py-3" /></tr>
+              <tr><th className="px-4 py-3">{t("exam.col.name", "Họ tên")}</th><th className="px-4 py-3">{t("exam.col.code", "Mã số")}</th><th className="px-4 py-3">{t("exam.versionLabel", "Mã đề")}</th><th className="px-4 py-3">{t("exam.export.classCode", "Mã lớp")}</th><th className="px-4 py-3 text-right">{t("exam.result.correct", "Số câu đúng")}</th><th className="px-4 py-3 text-right">{t("exam.result.score", "Điểm")}</th><th className="px-4 py-3">{t("exam.result.gradedAt", "Ngày giờ chấm")}</th>{exam.format === "ONLINE" && <th className="px-4 py-3">{t("exam.result.syncedAt", "Đồng bộ lên hệ thống")}</th>}<th className="px-4 py-3" /></tr>
             </thead>
             <tbody className="divide-y">
               {rows.map((r) => (
@@ -48,6 +46,7 @@ export function ResultsPanel({ exam, onOpen, onRecord }: { exam: Exam; onOpen: (
                   <td className="px-4 py-3 font-medium"><button type="button" className="text-left hover:text-primary focus-visible:outline-2" onClick={(e) => { e.stopPropagation(); onOpen(r); }}>{r.full_name}</button></td>
                   <td className="px-4 py-3 font-mono text-xs">{r.student_code}</td>
                   <td className="px-4 py-3 tabular-nums">{r.test_code ?? "—"}</td>
+                  <td className="px-4 py-3 tabular-nums">{r.class_code ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.total_correct ?? 0}/{r.total_questions ?? "—"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{scoreText(r.total_score)}</td>
                   <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">{timeText(r.graded_at ?? r.submitted_at)}</td>

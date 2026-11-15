@@ -151,7 +151,7 @@ export function ExamDetailPage() {
               <TabsContent value="versions"><VersionsPanel exam={e} /></TabsContent>
             </div>
           </Tabs>
-          <ResultDialog examId={e.id} resultId={openResult} open={openResult !== null} onOpenChange={(o) => { if (!o) setOpenResult(null); }} teacher />
+          <ResultDialog examId={e.id} resultId={openResult} open={openResult !== null} onOpenChange={(o) => { if (!o) setOpenResult(null); }} teacher format={e.format} />
           <RecordResultDialog examId={e.id} open={recording.open} studentId={recording.student} onOpenChange={(o) => setRecording((r) => ({ ...r, open: o }))} />
         </>
       )}

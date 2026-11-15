@@ -47,6 +47,8 @@ export interface Exam {
   is_score_published: boolean;
   /** the students may see the results: published by the teacher, or ONLINE with immediate result */
   results_released: boolean;
+  /** student, SUBMIT exam: a sheet of mine is already handed in */
+  my_submitted?: boolean;
   my_role: ExamRole;
   created_at: string | null;
 }
@@ -247,6 +249,9 @@ export interface Participant {
   /** when the phone's answers reached the server, and when the system marked the paper */
   synced_at?: string | null;
   graded_at?: string | null;
+  test_code?: string | null;
+  class_code?: string | null;
+  total_questions?: number | null;
 }
 
 export interface ResultRow {
@@ -255,6 +260,8 @@ export interface ResultRow {
   student_code: string;
   full_name: string;
   test_code: string | null;
+  /** the class code written on the sheet */
+  class_code?: string | null;
   total_correct: number | null;
   total_questions: number | null;
   total_score: number | null;
@@ -361,21 +368,23 @@ export const timeText = (iso: string | null | undefined) => {
 };
 export const scoreText = (v: number | null | undefined) => (v == null ? "—" : Number(v).toLocaleString("vi-VN", { maximumFractionDigits: 2 }));
 
-/** Rows for the export: student code (HSxxxxxxxx), version, right answers, score. A violation is 0 points. */
+/** Rows for the export: student code (HSxxxxxxxx), version, class code, total score, right answers. A violation is 0 points. */
 export function exportRows(rows: ResultRow[]) {
   return rows.map((r) => ({
-    code: r.student_code, name: r.full_name, version: r.test_code ?? "", correct: r.total_correct ?? 0,
-    questions: r.total_questions ?? 0, score: r.total_score ?? 0, violation: r.is_violation ? (r.violation_reason || "Vi phạm") : "",
+    code: r.student_code, name: r.full_name, version: r.test_code ?? "", classCode: r.class_code ?? "", correct: r.total_correct ?? 0,
+    questions: r.total_questions ?? 0, score: r.is_violation ? 0 : (r.total_score ?? 0), violation: r.is_violation ? (r.violation_reason || "Vi phạm") : "",
   }));
 }
 
-/** ONLINE exams: Excel without photos. */
+export const EXPORT_HEADERS = ["Mã số học sinh", "Mã đề", "Mã lớp", "Tổng điểm bài làm", "Số câu đúng"] as const;
+
+/** Excel (any format, no photos): Mã số học sinh, Mã đề, Mã lớp, Tổng điểm bài làm, Số câu đúng. */
 export async function downloadExamExcel(examName: string, rows: ResultRow[]) {
   const XLSX = await import("xlsx");
-  const data = [["Mã số học sinh", "Họ tên", "Mã đề", "Số câu đúng", "Điểm", "Vi phạm"],
-    ...exportRows(rows).map((r) => [r.code, r.name, r.version, r.correct, r.score, r.violation])];
+  const data = [[...EXPORT_HEADERS],
+    ...exportRows(rows).map((r) => [r.code, r.version, r.classCode, r.score, r.correct])];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws["!cols"] = [{ wch: 16 }, { wch: 26 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 28 }];
+  ws["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Kết quả");
   XLSX.writeFile(wb, `${examName.replace(/[\\/:*?"<>|]+/g, " ").trim() || "ky-thi"} - ket qua.xlsx`);

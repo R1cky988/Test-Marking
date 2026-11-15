@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
 import { PRINT_FRAME_CSS, PrintFrame } from "../components/PrintFrame";
-import { exportRows, getExam, getResultImageUrl, getResults, scoreText, type ResultRow } from "../examsSpring.api";
+import { EXPORT_HEADERS, exportRows, getExam, getResultImageUrl, getResults, scoreText, type ResultRow } from "../examsSpring.api";
 
-// PDF export of a paper exam (OFFLINE / SUBMIT): page 1 = the table (student code, version, right answers, score), then one
-// block per paper with the photo of the marked sheet. Use "In / Lưu PDF" and choose "Save as PDF" - names and Vietnamese
+// PDF export of any exam: the table (student code, version, class code, total score, right answers); with ?photos=1 on a paper
+// exam (OFFLINE / SUBMIT) one block per paper with the photo of the marked sheet follows. Use "In / Lưu PDF" and choose "Save as PDF" - names and Vietnamese
 // letters come out exactly as on screen.
 const CSS = `
 .a4-sheet { width: 210mm; min-height: 297mm; padding: 16mm 14mm; margin: 0 auto 24px; background: #fff; color: #111; box-shadow: 0 2px 16px rgba(0,0,0,.15); box-sizing: border-box; }
@@ -27,13 +27,15 @@ ${PRINT_FRAME_CSS}
 export function ExamExportPage() {
   const { t } = useTranslation();
   const { id = "" } = useParams();
+  const [params] = useSearchParams();
+  const withPhotos = params.get("photos") === "1";
   const exam = useQuery({ queryKey: ["exam", id], queryFn: () => getExam(id) });
   const results = useQuery({ queryKey: ["exam", id, "results"], queryFn: () => getResults(id) });
   const [images, setImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState(false);
 
   useEffect(() => {
-    const rows = results.data?.filter((r) => r.has_image) ?? [];
+    const rows = withPhotos ? (results.data?.filter((r) => r.has_image) ?? []) : [];
     if (rows.length === 0) return;
     let cancelled = false;
     const urls: string[] = [];
@@ -47,7 +49,7 @@ export function ExamExportPage() {
       if (!cancelled) setLoadingImages(false);
     })();
     return () => { cancelled = true; urls.forEach((u) => URL.revokeObjectURL(u)); };
-  }, [results.data, id]);
+  }, [results.data, id, withPhotos]);
 
   if (exam.isLoading || results.isLoading) return <div className="p-8"><Skeleton className="mx-auto h-96 max-w-3xl" /></div>;
   if (exam.isError || results.isError || !exam.data) return <div role="alert" className="p-8 text-center text-sm text-destructive">{getApiErrorMessage(exam.error ?? results.error, t("exam.export.failed", "Không xuất được file"))}</div>;
@@ -71,10 +73,10 @@ export function ExamExportPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, textAlign: "center" }}>{t("exam.print.exam", "Kỳ thi")} {e.name}</h1>
         <p style={{ textAlign: "center", margin: "4px 0 14px", fontSize: 13 }}>{[e.class_name, e.subject].filter(Boolean).join(" · ")}</p>
         <table>
-          <thead><tr><th>{t("exam.col.stt", "STT")}</th><th>{t("exam.export.studentCode", "Mã số học sinh")}</th><th>{t("exam.col.name", "Họ tên")}</th><th>{t("exam.versionLabel", "Mã đề")}</th><th>{t("exam.result.correct", "Số câu đúng")}</th><th>{t("exam.result.score", "Điểm")}</th><th>{t("exam.violation.label", "Vi phạm")}</th></tr></thead>
+          <thead><tr><th>{t("exam.col.stt", "STT")}</th><th>{EXPORT_HEADERS[0]}</th><th>{EXPORT_HEADERS[1]}</th><th>{EXPORT_HEADERS[2]}</th><th>{EXPORT_HEADERS[3]}</th><th>{EXPORT_HEADERS[4]}</th></tr></thead>
           <tbody>
             {flat.map((r, i) => (
-              <tr key={r.code}><td>{i + 1}</td><td style={{ fontFamily: "monospace" }}>{r.code}</td><td>{r.name}</td><td>{r.version}</td><td>{r.correct}/{r.questions}</td><td><strong>{scoreText(r.score)}</strong></td><td>{r.violation}</td></tr>
+              <tr key={r.code}><td>{i + 1}</td><td style={{ fontFamily: "monospace" }}>{r.code}</td><td>{r.version}</td><td>{r.classCode}</td><td><strong>{scoreText(r.score)}</strong></td><td>{r.correct}/{r.questions}</td></tr>
             ))}
           </tbody>
         </table>
@@ -82,7 +84,7 @@ export function ExamExportPage() {
         </PrintFrame>
       </section>
 
-      {rows.some((r) => r.has_image) && (
+      {withPhotos && rows.some((r) => r.has_image) && (
         <section className="a4-sheet" data-testid="export-photos">
           <PrintFrame>
           {rows.filter((r) => r.has_image).map((r) => (

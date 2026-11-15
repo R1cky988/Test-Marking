@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LatexContent } from "@/components/latex/LatexContent";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
+import { SheetPaper } from "./SheetPaper";
 import { getResult, getResultImageUrl, scoreText, setViolation, uploadResultImage, type ResultAnswer, type ResultDetail } from "../examsSpring.api";
 
 function gradedAt(iso: string | null | undefined): string {
@@ -68,7 +69,7 @@ function AnswerCard({ a }: { a: ResultAnswer }) {
 }
 
 /** One paper: who, version, right answers, score (+ violation), the answers and the photo of the marked sheet when there is one. */
-export function ResultDialog({ examId, resultId, preset, open, onOpenChange, teacher }: {
+export function ResultDialog({ examId, resultId, preset, open, onOpenChange, teacher, format }: {
   examId: string;
   resultId: string | null;
   /** the student's own paper is already loaded */
@@ -76,6 +77,8 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teacher: boolean;
+  /** OFFLINE / SUBMIT: the marked sheet is shown instead of the question-by-question detail of an online exam */
+  format?: "OFFLINE" | "ONLINE" | "SUBMIT";
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -130,6 +133,7 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {[
                 [t("exam.versionLabel", "Mã đề"), row.test_code ?? "—"],
+                ...(row.class_code ? [[t("exam.export.classCode", "Mã lớp"), row.class_code]] : []),
                 [t("exam.result.correct", "Số câu đúng"), `${row.total_correct ?? 0}/${row.total_questions ?? 0}`],
                 [t("exam.result.score", "Điểm"), `${scoreText(row.total_score)}/${scoreText(data.max_score)}`],
                 [t("exam.result.status", "Trạng thái"), row.is_violation ? t("exam.violation.label", "Vi phạm") : t("exam.result.ok", "Hợp lệ")],
@@ -153,9 +157,11 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
             {data.answers.length > 0 && (
               <section aria-label={t("exam.result.answers", "Chi tiết từng câu")}>
                 <h3 className="mb-2 text-sm font-semibold">{t("exam.result.answers", "Chi tiết từng câu")}</h3>
-                <ol className="space-y-3">
-                  {data.answers.map((a) => <AnswerCard key={a.order} a={a} />)}
-                </ol>
+                {format && format !== "ONLINE" ? <SheetPaper answers={data.answers} /> : (
+                  <ol className="space-y-3">
+                    {data.answers.map((a) => <AnswerCard key={a.order} a={a} />)}
+                  </ol>
+                )}
               </section>
             )}
 
