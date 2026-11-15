@@ -48,9 +48,9 @@ public class DemoDataSeeder implements CommandLineRunner {
         User an = user("student@demo.vn", "0900000002", "An", "Trần Văn");
         User binh = user("binh@demo.vn", "0900000003", "Bình", "Lê Thị");
         User chi = user("chi@demo.vn", "0900000004", "Chi", "Phạm Minh");
-        profile(teacher, "HS000");
-        Student sAn = profile(an, "HS001"), sBinh = profile(binh, "HS002");
-        profile(chi, "HS003");
+        profile(teacher, "HS00000000");
+        Student sAn = profile(an, "HS00000001"), sBinh = profile(binh, "HS00000002");
+        profile(chi, "HS00000003");
 
         Class c = new Class();
         c.setCreatedUser(teacher);

@@ -25,6 +25,8 @@ import static com.example.testmarking.template.TemplateConstants.*;
 public class GridConfigNormalizer {
 
     private static final Set<String> ID_TYPES = Set.of("student_id", "class_code", "exam_code");
+    /** The sheet has no class-code boxes: the class is known from the exam. Whatever is sent, it is saved as off (templates already stored keep what they have: their sheets are printed). */
+    private static final String CLASS_CODE = "class_code";
 
     // ─── request body -> GridConfig ─────────────────────────────
 
@@ -181,7 +183,7 @@ public class GridConfigNormalizer {
                 if (!(it.get("enabled") instanceof Boolean)) errors.add(p + ".enabled: must be a boolean");
                 if (digits == null || digits < 1 || digits > 15) errors.add(p + ".num_digits: must be an integer between 1 and 15");
                 if (type instanceof String t && ID_TYPES.contains(t) && it.get("enabled") instanceof Boolean en && digits != null && digits >= 1 && digits <= 15) {
-                    items.add(new IdZoneItem(t, en, digits));
+                    items.add(new IdZoneItem(t, en && !CLASS_CODE.equals(t), digits));
                 }
             }
         }

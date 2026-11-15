@@ -302,8 +302,6 @@ public class ExamResultImp {
         }
         r.setSubmittedBy(by);
         r.setTestCode(code);
-        String sheetClass = req.classCode() == null ? "" : req.classCode().trim();
-        if (!sheetClass.isEmpty() && !sheetClass.contains("?")) r.setClassCode(sheetClass.length() > 20 ? sheetClass.substring(0, 20) : sheetClass);
         r.setSubmissionSource(source);
         r.setProcessingStatus("SUCCESS");
 
@@ -626,7 +624,7 @@ public class ExamResultImp {
                 online ? (a == null ? "NOT_STARTED" : a.getStatus()) : null,
                 online ? (a == null ? 0 : a.getLeftCount()) : null,
                 has ? r.getSyncedAt() : null, has ? r.getGradedAt() : null,
-                has && r.getTestCode() != null ? r.getTestCode().getCodeNumber() : null, has ? r.getClassCode() : null,
+                has && r.getTestCode() != null ? r.getTestCode().getCodeNumber() : null, has ? e.getClassEntity().getName() : null,
                 has ? r.getTotalQuestions() : null);
     }
 
@@ -634,7 +632,7 @@ public class ExamResultImp {
         Student s = r.getStudent();
         boolean v = Boolean.TRUE.equals(r.getViolation());
         return new ExamResultRowResponse(r.getUuid(), s.getUuid(), s.getStudentCode(), ClassJson.displayName(s.getUser()),
-                r.getTestCode() == null ? null : r.getTestCode().getCodeNumber(), r.getClassCode(), correct(r), r.getTotalQuestions(), score(r), v,
+                r.getTestCode() == null ? null : r.getTestCode().getCodeNumber(), r.getExamination().getClassEntity().getName(), correct(r), r.getTotalQuestions(), score(r), v,
                 v ? r.getViolationReason() : null,
                 firstNonBlank(r.getImageMarkedRustKey(), r.getImageDewarpedRustKey(), r.getImageRawRustKey()) != null,
                 r.getSubmissionSource(), v ? "VIOLATION" : r.getProcessingStatus(), r.getCreatedAt(),

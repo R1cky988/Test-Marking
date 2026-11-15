@@ -14,11 +14,6 @@ public record ResultRequest(
         @JsonProperty("student_id") UUID studentId,
         @JsonProperty("student_code") String studentCode,
         @JsonProperty("test_code") String testCode,
-        @JsonProperty("answers") List<ResultAnswerRequest> answers,
-        /** the class code read from the sheet ("Mã lớp"); optional, kept for the result list and the export */
-        @JsonProperty("class_code") String classCode
+        @JsonProperty("answers") List<ResultAnswerRequest> answers
 ) {
-    public ResultRequest(UUID studentId, String studentCode, String testCode, List<ResultAnswerRequest> answers) {
-        this(studentId, studentCode, testCode, answers, null);
-    }
 }

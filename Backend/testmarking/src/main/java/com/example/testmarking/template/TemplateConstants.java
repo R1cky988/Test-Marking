@@ -80,7 +80,7 @@ public final class TemplateConstants {
     public static IdZone defaultIdZone() {
         return new IdZone(new BoundingBox(389, 80, 418, 288), List.of(
                 new IdZoneItem("student_id", true, 8),
-                new IdZoneItem("class_code", true, 5),
+                new IdZoneItem("class_code", false, 5),
                 new IdZoneItem("exam_code", true, 3)));
     }
 
