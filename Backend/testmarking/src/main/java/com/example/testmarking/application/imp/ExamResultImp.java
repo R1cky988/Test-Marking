@@ -34,6 +34,7 @@ public class ExamResultImp {
 
     public static final String SRC_TEACHER = "TEACHER_OFFLINE";
     public static final String SRC_ONLINE = "ONLINE_FORM";
+    public static final String SRC_STUDENT = "STUDENT_SHEET";
     public static final String NO_SUBMISSION = "NO_SUBMISSION";
     public static final long MAX_IMAGE_BYTES = 10L * 1024 * 1024;
     static final Set<String> KINDS = Set.of("raw", "dewarped", "marked");
@@ -221,6 +222,57 @@ public class ExamResultImp {
         return myResultOf(e, r);
     }
 
+    // ─── the student photographs his own paper sheet (SUBMIT exams) ───
+
+    /** The sheet layout a student needs to read his paper: only the template, never the answer keys. */
+    @Transactional(readOnly = true)
+    public TestLayout sheetLayout(User me, UUID examId) {
+        Examination e = requireOpenForSheet(me, examId);
+        if (e.getTestLayout() == null) throw TemplateException.badRequestWithCode("NO_TEMPLATE", "Kỳ thi chưa gắn mẫu phiếu");
+        return e.getTestLayout();
+    }
+
+    /** A student hands in the answers read from his own sheet; he may resend until the teacher releases the results. */
+    @Transactional
+    public MyResultResponse submitSheet(User me, UUID examId, ResultRequest req) {
+        Examination e = requireOpenForSheet(me, examId);
+        if (req == null) throw TemplateException.badRequest("Thiếu dữ liệu", "body: is required");
+        Student student = students.findByUser_Id(me.getId()).orElseThrow(() -> TemplateException.forbidden("Bạn không phải học sinh của lớp này"));
+        String onSheet = req.studentCode() == null ? "" : req.studentCode().trim();
+        if (!onSheet.isEmpty() && !onSheet.contains("?") && !onSheet.equalsIgnoreCase(student.getStudentCode())) {
+            throw TemplateException.badRequestWithCode("STUDENT_CODE_MISMATCH", "Mã số học sinh trên phiếu không phải của bạn");
+        }
+        ExamResult r = score(e, student, req, SRC_STUDENT, me);
+        return myResultOf(e, r);
+    }
+
+    /** The photo of the student's own sheet (kind marked | dewarped | raw). */
+    @Transactional
+    public MyResultResponse uploadMySheetImage(User me, UUID examId, String kind, FileData file) {
+        Examination e = requireOpenForSheet(me, examId);
+        Student student = students.findByUser_Id(me.getId()).orElseThrow(() -> TemplateException.forbidden("Bạn không phải học sinh của lớp này"));
+        ExamResult r = results.findLatestOf(e.getId(), student.getId())
+                .filter(x -> !NO_SUBMISSION.equals(x.getProcessingStatus()))
+                .orElseThrow(() -> TemplateException.notFound("RESULT_NOT_FOUND", "Bạn chưa gửi bài làm"));
+        attachImage(e, r, kind, file);
+        return myResultOf(e, r);
+    }
+
+    private Examination requireOpenForSheet(User me, UUID examId) {
+        Examination e = exams.requireStudentAccess(me, exams.find(examId));
+        if (e.getFormat() != ExamFormat.SUBMIT) {
+            throw TemplateException.badRequestWithCode("EXAM_NOT_SUBMIT", "Chỉ kỳ thi nộp phiếu mới chụp bài làm");
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        if (e.getStatus() != ExamStatus.ONGOING || (e.getToTime() != null && now.isAfter(e.getToTime()))) {
+            throw TemplateException.badRequestWithCode("EXAM_NOT_OPEN", "Kỳ thi đã kết thúc hoặc chưa bắt đầu");
+        }
+        if (ExamImp.released(e)) {
+            throw TemplateException.badRequestWithCode("RESULT_RELEASED", "Giáo viên đã công bố kết quả, không thể nộp lại");
+        }
+        return e;
+    }
+
     private ExamResult score(Examination e, Student student, ResultRequest req, String source, User by) {
         TestCode code = pickCode(e, req.testCode());
         List<TestCodeQuestion> paper = codeQuestions.findByCodes(List.of(code.getId()));
@@ -250,6 +302,8 @@ public class ExamResultImp {
         }
         r.setSubmittedBy(by);
         r.setTestCode(code);
+        String sheetClass = req.classCode() == null ? "" : req.classCode().trim();
+        if (!sheetClass.isEmpty() && !sheetClass.contains("?")) r.setClassCode(sheetClass.length() > 20 ? sheetClass.substring(0, 20) : sheetClass);
         r.setSubmissionSource(source);
         r.setProcessingStatus("SUCCESS");
 
@@ -513,6 +567,10 @@ public class ExamResultImp {
     public ExamResultRowResponse uploadImage(User me, UUID examId, UUID resultId, String kind, FileData file) {
         Examination e = exams.requireTeacher(me, examId);
         ExamResult r = requireResult(e, resultId);
+        return row(attachImage(e, r, kind, file));
+    }
+
+    private ExamResult attachImage(Examination e, ExamResult r, String kind, FileData file) {
         String k = requireKind(kind == null || kind.isBlank() ? "marked" : kind);
         if (file == null || file.stream() == null || file.size() <= 0) throw TemplateException.badRequest("Chưa chọn ảnh", "file: is required");
         if (file.size() > MAX_IMAGE_BYTES) throw TemplateException.badRequestWithCode("FILE_TOO_LARGE", "Ảnh vượt quá 10MB", "max_bytes=" + MAX_IMAGE_BYTES);
@@ -528,7 +586,7 @@ public class ExamResultImp {
             case "dewarped" -> r.setImageDewarpedRustKey(key);
             default -> r.setImageRawRustKey(key);
         }
-        return row(results.save(r));
+        return results.save(r);
     }
 
     // ─── helpers ─────────────────────────────────────────────────
@@ -567,14 +625,16 @@ public class ExamResultImp {
                 r != null && Boolean.TRUE.equals(r.getViolation()), r == null ? null : r.getCreatedAt(),
                 online ? (a == null ? "NOT_STARTED" : a.getStatus()) : null,
                 online ? (a == null ? 0 : a.getLeftCount()) : null,
-                has ? r.getSyncedAt() : null, has ? r.getGradedAt() : null);
+                has ? r.getSyncedAt() : null, has ? r.getGradedAt() : null,
+                has && r.getTestCode() != null ? r.getTestCode().getCodeNumber() : null, has ? r.getClassCode() : null,
+                has ? r.getTotalQuestions() : null);
     }
 
     private ExamResultRowResponse row(ExamResult r) {
         Student s = r.getStudent();
         boolean v = Boolean.TRUE.equals(r.getViolation());
         return new ExamResultRowResponse(r.getUuid(), s.getUuid(), s.getStudentCode(), ClassJson.displayName(s.getUser()),
-                r.getTestCode() == null ? null : r.getTestCode().getCodeNumber(), correct(r), r.getTotalQuestions(), score(r), v,
+                r.getTestCode() == null ? null : r.getTestCode().getCodeNumber(), r.getClassCode(), correct(r), r.getTotalQuestions(), score(r), v,
                 v ? r.getViolationReason() : null,
                 firstNonBlank(r.getImageMarkedRustKey(), r.getImageDewarpedRustKey(), r.getImageRawRustKey()) != null,
                 r.getSubmissionSource(), v ? "VIOLATION" : r.getProcessingStatus(), r.getCreatedAt(),

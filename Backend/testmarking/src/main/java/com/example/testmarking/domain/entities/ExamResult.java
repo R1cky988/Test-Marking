@@ -56,6 +56,10 @@ public class ExamResult {
     @Column(name = "total_score", precision = 5, scale = 2)
     private BigDecimal totalScore;
 
+    /** The class code written on the sheet (the "Mã lớp" boxes), as the phone read it; null when the sheet had none. */
+    @Column(name = "class_code", length = 20)
+    private String classCode;
+
     @Column(name = "total_correct")
     private Integer totalCorrect;
 

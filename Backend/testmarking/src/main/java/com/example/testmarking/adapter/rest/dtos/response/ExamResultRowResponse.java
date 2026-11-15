@@ -14,6 +14,7 @@ public record ExamResultRowResponse(
         @JsonProperty("student_code") String studentCode,
         @JsonProperty("full_name") String fullName,
         @JsonProperty("test_code") String testCode,
+        @JsonProperty("class_code") String classCode,
         @JsonProperty("total_correct") Integer totalCorrect,
         @JsonProperty("total_questions") Integer totalQuestions,
         @JsonProperty("total_score") BigDecimal totalScore,

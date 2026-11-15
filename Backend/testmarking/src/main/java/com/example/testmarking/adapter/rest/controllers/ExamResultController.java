@@ -123,6 +123,30 @@ public class ExamResultController {
         return ok(service.submit(me.getUser(), examId, body));
     }
 
+    /** SUBMIT exam: the mapping of the sheet a student must read (template only, no answer keys). */
+    @GetMapping("/{examId}/my-sheet/template")
+    public ApiResponse<com.example.testmarking.domain.entities.TestLayout> mySheetTemplate(@AuthenticationPrincipal SecurityUser me, @PathVariable("examId") UUID examId) {
+        return ok(service.sheetLayout(me.getUser(), examId));
+    }
+
+    /** SUBMIT exam: the answers read from the student's own sheet { student_code, test_code, class_code, answers }. */
+    @PostMapping("/{examId}/my-sheet")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<MyResultResponse> submitSheet(@AuthenticationPrincipal SecurityUser me, @PathVariable("examId") UUID examId,
+                                                     @RequestBody ResultRequest body) {
+        return ok(service.submitSheet(me.getUser(), examId, body));
+    }
+
+    /** multipart/form-data: file (JPG/PNG/WEBP, max 10MB), kind (marked by default). */
+    @PostMapping(path = "/{examId}/my-sheet/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<MyResultResponse> uploadMySheetImage(@AuthenticationPrincipal SecurityUser me, @PathVariable("examId") UUID examId,
+                                                            @RequestParam("file") MultipartFile file,
+                                                            @RequestParam(name = "kind", required = false) String kind) throws IOException {
+        FileData data = new FileData(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream());
+        return ok(service.uploadMySheetImage(me.getUser(), examId, kind, data));
+    }
+
     // ─── violations and analysis (teacher) ───────────────────────
 
     @GetMapping("/{examId}/violations")

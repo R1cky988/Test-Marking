@@ -26,4 +26,9 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long> {
     @Query("select r from ExamResult r left join fetch r.testCode "
             + "where r.examination.id = :examId and r.student.id = :studentId and r.isLatest = true")
     Optional<ExamResult> findLatestOf(@Param("examId") Long examId, @Param("studentId") Long studentId);
+
+    /** The user has handed in a paper for the exam (a paper that only carries a violation does not count). */
+    @Query("select count(r) > 0 from ExamResult r where r.examination.id = :examId and r.student.user.id = :userId "
+            + "and r.isLatest = true and r.processingStatus <> 'NO_SUBMISSION'")
+    boolean hasSubmitted(@Param("examId") Long examId, @Param("userId") Long userId);
 }

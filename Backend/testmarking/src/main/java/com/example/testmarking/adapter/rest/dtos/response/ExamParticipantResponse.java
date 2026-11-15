@@ -23,6 +23,9 @@ public record ExamParticipantResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("attempt_status") String attemptStatus,
         @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("left_count") Integer leftCount,
         @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("synced_at") OffsetDateTime syncedAt,
-        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("graded_at") OffsetDateTime gradedAt
+        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("graded_at") OffsetDateTime gradedAt,
+        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("test_code") String testCode,
+        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("class_code") String classCode,
+        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("total_questions") Integer totalQuestions
 ) {
 }

@@ -112,6 +112,10 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<parameters>true</parameters>
+					<release>21</release>
+				</configuration>
 				<executions>
 					<execution>
 						<id>default-compile</id>
@@ -144,10 +148,6 @@
 						</configuration>
 					</execution>
 				</executions>
-                <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                </configuration>
             </plugin>
 		</plugins>
 	</build>

@@ -39,6 +39,8 @@ public record ExamResponse(
         @JsonProperty("is_score_published") boolean isScorePublished,
         @JsonProperty("results_released") boolean resultsReleased,
         @JsonProperty("my_role") String myRole,
-        @JsonProperty("created_at") OffsetDateTime createdAt
+        @JsonProperty("created_at") OffsetDateTime createdAt,
+        /** a student: he has already handed in his paper (an exam of the format SUBMIT or ONLINE) */
+        @JsonProperty("my_submitted") boolean mySubmitted
 ) {
 }

@@ -90,14 +90,14 @@ public class ExamImp {
             result = exams.findMine(me.getId(), hasFormat ? 1 : 0, fmt, cid, q, PageRequest.of(p - 1, l));
         }
         List<ExamResponse> data = new ArrayList<>();
-        for (Examination e : result.getContent()) data.add(asStudent ? studentView(e) : response(e));
+        for (Examination e : result.getContent()) data.add(asStudent ? studentView(me, e) : response(e));
         return new ExamListResponse(200, "OK", data, new ClassListMeta(p, l, result.getTotalElements()));
     }
 
     @Transactional(readOnly = true)
     public ExamResponse get(User me, UUID examId) {
         Examination e = find(examId);
-        return isCreator(me, e) ? response(e) : studentView(requireStudentAccess(me, e));
+        return isCreator(me, e) ? response(e) : studentView(me, requireStudentAccess(me, e));
     }
 
     // ─── access shared with the result service ───────────────────
@@ -471,15 +471,16 @@ public class ExamImp {
                 immediate, e.getFormat() == ExamFormat.ONLINE && Boolean.TRUE.equals(e.getAllowReference()),
                 OnlineExamRules.normalizePolicy(e.getLeavePolicy()),
                 immediate ? "IMMEDIATE" : "AFTER_TEACHER_PUBLISH", Boolean.TRUE.equals(e.getIsScorePublished()),
-                released(e), "TEACHER", e.getCreatedAt());
+                released(e), "TEACHER", e.getCreatedAt(), false);
     }
 
     /** What a student may know about the exam: no template, bank or version facts. */
-    private ExamResponse studentView(Examination e) {
+    private ExamResponse studentView(User me, Examination e) {
         ExamResponse r = response(e);
         return new ExamResponse(r.id(), r.name(), r.subject(), r.classId(), r.className(), r.format(), r.status(), r.fromTime(), r.toTime(),
                 r.durationMinutes(), r.maxScore(), null, null, null, null, null, 0, 0, 0, 0, 0,
-                r.showResultImmediately(), r.allowReference(), r.leavePolicy(), r.resultPolicy(), r.isScorePublished(), r.resultsReleased(), "STUDENT", r.createdAt());
+                r.showResultImmediately(), r.allowReference(), r.leavePolicy(), r.resultPolicy(), r.isScorePublished(), r.resultsReleased(), "STUDENT", r.createdAt(),
+                results.hasSubmitted(e.getId(), me.getId()));
     }
 
     private static ExamFormat parseFormat(String s) {
