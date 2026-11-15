@@ -211,13 +211,17 @@ export async function updateProfile(payload: {
   }
 }
 
+/**
+ * POST /api/v1/user/avatar   multipart "file" (the picture already cropped by the dialog; JPG/PNG/WEBP, max 2MB)
+ * Answers { status, message, data: <profile> }; the profile carries the new avatarUrl.
+ */
 export async function uploadAvatar(file: File): Promise<AuthProfile> {
   const formData = new FormData();
   formData.append('file', file);
-  const { data } = await axiosClient.post<AuthProfile>('/auth/me/avatar', formData, {
+  const { data } = await axiosClient.post('/user/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return data;
+  return toProfile(data.data);
 }
 
 export interface GoogleLinkResult {

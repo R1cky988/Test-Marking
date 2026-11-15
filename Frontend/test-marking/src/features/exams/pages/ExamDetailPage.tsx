@@ -84,7 +84,7 @@ export function ExamDetailPage() {
       [t("exam.field.duration", "Thời lượng (phút)"), e.duration_minutes ? String(e.duration_minutes) : "—"] as [string, string],
       [t("exam.field.result", "Kết quả"), resultText(e)] as [string, string],
       ...(e.format === "ONLINE" ? [[t("exam.field.allowReference", "Cho phép tra cứu tài liệu"), e.allow_reference ? t("common.yes", "Có") : t("common.no", "Không")] as [string, string]] : []),
-      ...(e.format === "ONLINE" && !e.allow_reference ? [[t("exam.field.leavePolicy", "Khi học sinh tự ý thoát màn hình làm bài"), e.leave_policy === "LOCK" ? t("exam.leave.lock", "Khóa bài thi") : t("exam.leave.flag", "Vẫn cho làm tiếp nhưng báo vi phạm")] as [string, string]] : []),
+      ...(e.format === "ONLINE" && !e.allow_reference ? [[t("exam.field.leavePolicy", "Khi học sinh tự ý thoát màn hình làm bài"), e.leave_policy === "LOCK" ? t("exam.leave.lock", "Khóa bài thi") : t("exam.leave.flag", "Vẫn cho làm tiếp, ghi vi phạm")] as [string, string]] : []),
       [t("exam.step.template", "Mẫu phiếu"), e.template_name ? `${e.template_name} (${e.template_total_questions ?? 0} ${t("exam.questionsShort", "câu")})` : "—"] as [string, string],
       [t("exam.field.bank", "Ngân hàng câu hỏi"), e.question_bank_name ?? "—"] as [string, string],
     ] : []),

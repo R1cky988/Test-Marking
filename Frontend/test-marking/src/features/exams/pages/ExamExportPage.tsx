@@ -7,6 +7,7 @@ import { Link, useParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
+import { PRINT_FRAME_CSS, PrintFrame } from "../components/PrintFrame";
 import { exportRows, getExam, getResultImageUrl, getResults, scoreText, type ResultRow } from "../examsSpring.api";
 
 // PDF export of a paper exam (OFFLINE / SUBMIT): page 1 = the table (student code, version, right answers, score), then one
@@ -19,7 +20,8 @@ const CSS = `
 .a4-sheet th { background: #f1f1f1; }
 .a4-paper { break-inside: avoid; page-break-inside: avoid; border: 1px solid #ccc; border-radius: 6px; padding: 8px; margin-bottom: 10px; }
 .a4-paper img { max-height: 120mm; max-width: 100%; display: block; margin: 6px auto 0; object-fit: contain; }
-@media print { @page { size: A4; margin: 0; } html, body, #root { background: #fff !important; height: auto !important; overflow: visible !important; } .no-print { display: none !important; } .a4-sheet { margin: 0; box-shadow: none; } }
+${PRINT_FRAME_CSS}
+@media print { .a4-sheet { margin: 0; padding: 0 14mm; min-height: 0; width: auto; box-shadow: none; } .a4-sheet + .a4-sheet { break-before: page; page-break-before: always; } }
 `;
 
 export function ExamExportPage() {
@@ -65,6 +67,7 @@ export function ExamExportPage() {
       </div>
 
       <section className="a4-sheet" data-testid="export-summary">
+        <PrintFrame>
         <h1 style={{ fontSize: 20, fontWeight: 700, textAlign: "center" }}>{t("exam.print.exam", "Kỳ thi")} {e.name}</h1>
         <p style={{ textAlign: "center", margin: "4px 0 14px", fontSize: 13 }}>{[e.class_name, e.subject].filter(Boolean).join(" · ")}</p>
         <table>
@@ -76,16 +79,19 @@ export function ExamExportPage() {
           </tbody>
         </table>
         {rows.length === 0 && <p style={{ textAlign: "center", marginTop: 16, fontSize: 13 }}>{t("exam.results.empty", "Chưa có bài thi nào")}</p>}
+        </PrintFrame>
       </section>
 
       {rows.some((r) => r.has_image) && (
         <section className="a4-sheet" data-testid="export-photos">
+          <PrintFrame>
           {rows.filter((r) => r.has_image).map((r) => (
             <div key={r.id} className="a4-paper">
               <strong style={{ fontFamily: "monospace" }}>{r.student_code}</strong> · {r.full_name} · {t("exam.versionLabel", "Mã đề")} {r.test_code ?? "—"} · {r.total_correct ?? 0}/{r.total_questions ?? 0} {t("exam.questionsShort", "câu")} · <strong>{scoreText(r.total_score)} {t("exam.result.points", "điểm")}</strong>{r.is_violation ? ` · ${t("exam.violation.label", "Vi phạm")}` : ""}
               {images[r.id] ? <img src={images[r.id]} alt={t("exam.result.photoAlt", "Ảnh bài chấm của {{name}}", { name: r.full_name })} /> : null}
             </div>
           ))}
+          </PrintFrame>
         </section>
       )}
     </div>

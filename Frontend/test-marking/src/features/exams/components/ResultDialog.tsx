@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Flag, ImagePlus, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { Check, ImagePlus, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LatexContent } from "@/components/latex/LatexContent";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
-import { decideFlag, getResult, getResultImageUrl, scoreText, setViolation, uploadResultImage, type FlagDecision, type ResultAnswer, type ResultDetail } from "../examsSpring.api";
+import { getResult, getResultImageUrl, scoreText, setViolation, uploadResultImage, type ResultAnswer, type ResultDetail } from "../examsSpring.api";
 
 function gradedAt(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -111,14 +111,6 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
     onSuccess: () => { toast.success(row?.is_violation ? t("exam.violation.cleared", "Đã bỏ vi phạm") : t("exam.violation.marked", "Đã đánh dấu vi phạm")); setReason(""); refresh(); },
     onError: (e) => toast.error(getApiErrorMessage(e, t("exam.violation.failed", "Không cập nhật được vi phạm"))),
   });
-  const [penalty, setPenalty] = useState("");
-  const decide = useMutation({
-    mutationFn: ({ decision, points }: { decision: FlagDecision; points?: number }) => decideFlag(examId, row!.student_id, decision, points),
-    onSuccess: () => { toast.success(t("exam.flag.saved", "Đã lưu quyết định")); setPenalty(""); refresh(); },
-    onError: (e) => toast.error(getApiErrorMessage(e, t("exam.flag.failed", "Không lưu được quyết định"))),
-  });
-  const penaltyValue = Number(penalty.replace(",", "."));
-  const penaltyOk = penalty.trim() !== "" && Number.isFinite(penaltyValue) && penaltyValue > 0 && penaltyValue <= (data?.max_score ?? Infinity);
   const upload = useMutation({
     mutationFn: (file: File) => uploadResultImage(examId, row!.id, file),
     onSuccess: () => { toast.success(t("exam.result.imageSaved", "Đã lưu ảnh bài chấm")); refresh(); },
@@ -182,29 +174,6 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
                 <a href={image} target="_blank" rel="noreferrer"><img src={image} alt={t("exam.result.photoAlt", "Ảnh bài chấm của {{name}}", { name: row.full_name })} className="max-h-[70vh] w-full rounded-xl border object-contain" /></a>
               ) : <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">{t("exam.result.noPhoto", "Bài này chưa có ảnh.")}</p>}
             </section>}
-
-            {row.is_flagged && (
-              <section className="space-y-3 rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">
-                <p className="flex items-start gap-2">
-                  <Flag className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>
-                    {t("exam.flag.note", "Học sinh bị báo vi phạm khi làm bài: {{reason}}.", { reason: row.flag_reason ?? "" })}{" "}
-                    {row.flag_decision === "ZERO" ? t("exam.flag.isZero", "Đã quyết định: tính 0 điểm.")
-                      : row.flag_decision === "DEDUCT" ? t("exam.flag.isDeduct", "Đã quyết định: trừ {{n}} điểm.", { n: scoreText(row.penalty_points ?? 0) })
-                      : row.flag_decision === "DISMISS" ? t("exam.flag.isDismiss", "Đã quyết định: không xử lý.")
-                      : t("exam.flag.pending", "Chưa quyết định: học sinh chưa thấy điểm.")}
-                  </span>
-                </p>
-                {teacher && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button type="button" size="sm" variant="destructive" disabled={decide.isPending} onClick={() => decide.mutate({ decision: "ZERO" })}>{t("exam.flag.zero", "Tính 0 điểm")}</Button>
-                    <Input value={penalty} onChange={(e) => setPenalty(e.target.value)} inputMode="decimal" className="h-8 w-24" placeholder={t("exam.flag.points", "Số điểm trừ")} aria-label={t("exam.flag.points", "Số điểm trừ")} />
-                    <Button type="button" size="sm" variant="outline" disabled={decide.isPending || !penaltyOk} onClick={() => decide.mutate({ decision: "DEDUCT", points: penaltyValue })}>{t("exam.flag.deduct", "Trừ điểm")}</Button>
-                    <Button type="button" size="sm" variant="ghost" disabled={decide.isPending} onClick={() => decide.mutate({ decision: "DISMISS" })}>{t("exam.flag.dismiss", "Bỏ qua")}</Button>
-                  </div>
-                )}
-              </section>
-            )}
 
             {teacher && (
               <section className="space-y-2 rounded-xl border p-3">

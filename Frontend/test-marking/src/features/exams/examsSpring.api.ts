@@ -247,14 +247,7 @@ export interface Participant {
   /** when the phone's answers reached the server, and when the system marked the paper */
   synced_at?: string | null;
   graded_at?: string | null;
-  /** ONLINE: reported for leaving the exam screen; flag_decision null = the teacher has not decided yet */
-  is_flagged?: boolean;
-  flag_reason?: string | null;
-  flag_decision?: FlagDecision | null;
-  penalty_points?: number | null;
 }
-
-export type FlagDecision = "ZERO" | "DEDUCT" | "DISMISS";
 
 export interface ResultRow {
   id: string;
@@ -277,11 +270,6 @@ export interface ResultRow {
   synced_at?: string | null;
   /** ONLINE: when the student handed in on his phone */
   client_submitted_at?: string | null;
-  /** ONLINE: reported for leaving the exam screen (leave_policy FLAG); the teacher decides what it costs */
-  is_flagged?: boolean;
-  flag_reason?: string | null;
-  flag_decision?: FlagDecision | null;
-  penalty_points?: number | null;
 }
 
 export interface ResultOption { label: string; content: string; is_correct: boolean }
@@ -296,7 +284,7 @@ export interface ResultAnswer {
   explanation?: string | null;
 }
 export interface ResultDetail { result: ResultRow; max_score: number; answers: ResultAnswer[] }
-export interface MyResult { released: boolean; submitted: boolean; detail?: ResultDetail; /** reported and not decided yet: the score is held back */ pending_review?: boolean }
+export interface MyResult { released: boolean; submitted: boolean; detail?: ResultDetail }
 
 export interface OptionStat { label: string; content: string; is_correct: boolean; count: number; percent: number }
 export interface QuestionStat {
@@ -330,9 +318,6 @@ export const getResults = async (id: string) => (await axiosClient.get<ApiSingle
 export const getResult = async (id: string, resultId: string) => (await axiosClient.get<ApiSingleResponse<ResultDetail>>(`/exams/${id}/results/${resultId}`)).data.data;
 export const getMyResult = async (id: string) => (await axiosClient.get<ApiSingleResponse<MyResult>>(`/exams/${id}/my-result`)).data.data;
 export const getViolations = async (id: string) => (await axiosClient.get<ApiSingleResponse<ResultRow[]>>(`/exams/${id}/violations`)).data.data;
-/** What a paper reported for leaving the exam screen costs: ZERO (0 points), DEDUCT (minus penalty_points) or DISMISS. */
-export const decideFlag = async (id: string, studentId: string, decision: FlagDecision, penaltyPoints?: number) =>
-  (await axiosClient.put<ApiSingleResponse<Participant>>(`/exams/${id}/flags`, { student_id: studentId, decision, penalty_points: penaltyPoints })).data.data;
 export const getAnalysis = async (id: string) => (await axiosClient.get<ApiSingleResponse<ExamAnalysis>>(`/exams/${id}/analysis`)).data.data;
 export const recordResult = async (id: string, payload: RecordResultPayload) => (await axiosClient.post<ApiSingleResponse<ResultDetail>>(`/exams/${id}/results`, payload)).data.data;
 export const setViolation = async (id: string, studentId: string, violation: boolean, reason?: string) =>

@@ -8,19 +8,19 @@ import { LatexContent } from "@/components/latex/LatexContent";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
+import { PRINT_FRAME_CSS, PrintFrame } from "../components/PrintFrame";
 import { getExamPrint } from "../examsSpring.api";
 
 // A4 print sheet: one page (or more, if long) per version. Centered on top: "Kỳ thi {examName}", under it the version code,
-// then the questions with their options. A long version flows onto the next page (a question is never split); the page
-// margins come from @page so every continuation page keeps them. The toolbar is hidden when printing; use "Save as PDF" in the print dialog for a file.
+// then the questions with their options. A long version flows onto the next page (a question is never split).
+// The browser prints its own header and footer (date, tab title, address, page number) only inside a page margin, so @page keeps
+// margin 0 and the space above and below every page comes from PrintFrame. The toolbar is hidden when printing.
 const PRINT_CSS = `
 .a4-sheet { width: 210mm; min-height: 297mm; padding: 18mm 16mm; margin: 0 auto 24px; background: #fff; color: #111; box-shadow: 0 2px 16px rgba(0,0,0,.15); box-sizing: border-box; }
 .a4-sheet .latex-content { color: #111; }
+${PRINT_FRAME_CSS}
 @media print {
-  @page { size: A4; margin: 18mm 16mm; }
-  html, body, #root { background: #fff !important; height: auto !important; overflow: visible !important; }
-  .no-print { display: none !important; }
-  .a4-sheet { margin: 0; padding: 0; min-height: 0; width: auto; box-shadow: none; page-break-after: always; break-after: page; }
+  .a4-sheet { margin: 0; padding: 0 16mm; min-height: 0; width: auto; box-shadow: none; page-break-after: always; break-after: page; }
   .a4-sheet:last-child { page-break-after: auto; break-after: auto; }
   .a4-question { break-inside: avoid; page-break-inside: avoid; }
 }
@@ -51,6 +51,7 @@ export function ExamPrintPage() {
 
       {versions.map((v) => (
         <section key={v.id} className="a4-sheet" aria-label={`${t("exam.versionLabel", "Mã đề")} ${v.code}`} data-testid="a4-sheet">
+          <PrintFrame>
           <header className="mb-6 text-center">
             <h1 className="text-2xl font-bold uppercase tracking-wide">{t("exam.print.exam", "Kỳ thi")} {exam_name}</h1>
             <p className="mt-2 text-lg font-semibold">{t("exam.versionLabel", "Mã đề")}: <span className="tabular-nums">{v.code}</span></p>
@@ -76,6 +77,7 @@ export function ExamPrintPage() {
               </li>
             ))}
           </ol>
+          </PrintFrame>
         </section>
       ))}
     </div>

@@ -38,7 +38,7 @@ interface FormState {
   bankId: string;
 }
 
-const EMPTY: FormState = { name: "", subject: "", classId: "", format: "OFFLINE", from: "", to: "", duration: "", showResult: true, allowReference: false, leavePolicy: "FLAG", templateId: "", bankId: "" };
+const EMPTY: FormState = { name: "", subject: "", classId: "", format: "OFFLINE", from: "", to: "", duration: "", showResult: false, allowReference: false, leavePolicy: "FLAG", templateId: "", bankId: "" };
 
 const toLocalInput = (iso: string | null) => {
   if (!iso) return "";
@@ -249,17 +249,17 @@ export function ExamFormPage() {
               <div className="flex items-center justify-between gap-4 rounded-xl border p-3">
                 <div>
                   <Label htmlFor="ex-ref" className="font-medium">{t("exam.field.allowReference", "Cho phép tra cứu tài liệu")}</Label>
-                  <p className="text-xs text-muted-foreground">{t("exam.field.allowReferenceHint", "Bật: thoát khỏi màn hình làm bài (để xem tài liệu) không bị ghi vi phạm. Tắt: thoát màn hình sẽ xử lý theo quy định vi phạm.")}</p>
+                  <p className="text-xs text-muted-foreground">{t("exam.field.allowReferenceHint", "Bật: thoát khỏi màn hình làm bài (để xem tài liệu) không bị ghi vi phạm, mặc định hiện kết quả ngay sau khi nộp. Tắt: thoát màn hình bị ghi vi phạm (0 điểm), mặc định không hiện kết quả sau khi nộp.")}</p>
                 </div>
-                <Switch id="ex-ref" checked={form.allowReference} onCheckedChange={(v) => set("allowReference", v)} />
+                <Switch id="ex-ref" checked={form.allowReference} onCheckedChange={(v) => setForm((f) => ({ ...f, allowReference: v, showResult: v }))} />
               </div>
             )}
             {form.format === "ONLINE" && !form.allowReference && (
               <fieldset className="space-y-2 rounded-xl border p-3">
                 <legend className="px-1 text-sm font-medium">{t("exam.field.leavePolicy", "Khi học sinh tự ý thoát màn hình làm bài")}</legend>
                 {([
-                  ["FLAG", t("exam.leave.flag", "Vẫn cho làm tiếp nhưng báo vi phạm"), t("exam.leave.flagHint", "Bài được chấm, điểm ghi 0 vì vi phạm, giáo viên vẫn xem được bài làm.")],
-                  ["LOCK", t("exam.leave.lock", "Khóa bài thi"), t("exam.leave.lockHint", "Học sinh không làm tiếp được cho đến khi giáo viên mở khóa.")],
+                  ["FLAG", t("exam.leave.flag", "Vẫn cho làm tiếp, ghi vi phạm"), t("exam.leave.flagHint", "Bài tính 0 điểm vì vi phạm và hiện ở tab Vi phạm; giáo viên vẫn xem được bài làm và có thể bỏ vi phạm.")],
+                  ["LOCK", t("exam.leave.lock", "Khóa bài thi"), t("exam.leave.lockHint", "Ghi vi phạm (0 điểm) và học sinh không làm tiếp được cho đến khi giáo viên mở khóa; mở khóa không xóa vi phạm.")],
                 ] as const).map(([value, label, hint]) => (
                   <label key={value} className="flex cursor-pointer items-start gap-2 text-sm">
                     <input type="radio" name="leave-policy" className="mt-1" checked={form.leavePolicy === value} onChange={() => set("leavePolicy", value)} />
