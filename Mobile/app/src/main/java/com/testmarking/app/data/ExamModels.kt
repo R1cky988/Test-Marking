@@ -15,6 +15,8 @@ data class ExamDetailDto(
     @SerializedName("allow_reference") val allowReference: Boolean? = null,
     @SerializedName("leave_policy") val leavePolicy: String? = null,
     @SerializedName("results_released") val resultsReleased: Boolean? = null,
+    @SerializedName("template_id") val templateId: String? = null,
+    @SerializedName("template_name") val templateName: String? = null,
 )
 
 data class PaperOptionDto(val label: String? = null, val content: String? = null)
@@ -68,6 +70,7 @@ data class AttemptSyncBody(
 )
 
 data class ResultRowDto(
+    val id: String? = null,
     @SerializedName("total_correct") val totalCorrect: Int? = null,
     @SerializedName("total_questions") val totalQuestions: Int? = null,
     @SerializedName("total_score") val totalScore: Double? = null,
@@ -86,8 +89,6 @@ data class MyResultDto(
     val released: Boolean? = null,
     val submitted: Boolean? = null,
     val detail: ResultDetailDto? = null,
-    /** reported for leaving the exam screen and not decided yet: the score is held back */
-    @SerializedName("pending_review") val pendingReview: Boolean? = null,
 )
 
 data class AttemptSyncDto(val attempt: AttemptStateDto? = null, val result: MyResultDto? = null)
@@ -106,16 +107,4 @@ data class ParticipantDto(
     @SerializedName("left_count") val leftCount: Int? = null,
     @SerializedName("synced_at") val syncedAt: String? = null,
     @SerializedName("graded_at") val gradedAt: String? = null,
-    /** reported for leaving the exam screen; flagDecision null = the teacher has not decided yet */
-    @SerializedName("is_flagged") val isFlagged: Boolean? = null,
-    @SerializedName("flag_reason") val flagReason: String? = null,
-    /** ZERO | DEDUCT | DISMISS */
-    @SerializedName("flag_decision") val flagDecision: String? = null,
-    @SerializedName("penalty_points") val penaltyPoints: Double? = null,
-)
-
-data class FlagDecisionBody(
-    @SerializedName("student_id") val studentId: String,
-    val decision: String,
-    @SerializedName("penalty_points") val penaltyPoints: Double? = null,
 )

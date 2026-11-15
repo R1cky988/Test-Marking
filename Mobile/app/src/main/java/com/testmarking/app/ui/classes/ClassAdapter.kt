@@ -26,7 +26,8 @@ class ClassAdapter(
         val ctx = b.root.context
         b.ivIcon.setImageResource(if (showTeacher) R.drawable.ic_school else R.drawable.ic_teach)
         b.tvName.text = item.className.orEmpty()
-        b.tvSubject.text = item.subject?.takeIf { it.isNotBlank() } ?: ctx.getString(R.string.class_code_label, item.classCode.orEmpty())
+        // the class code is for the teacher (he gives the join code, not this one); a student does not see it
+        b.tvSubject.text = item.subject?.takeIf { it.isNotBlank() } ?: if (showTeacher) "" else ctx.getString(R.string.class_code_label, item.classCode.orEmpty())
         b.tvArchived.show(item.status.equals("archived", ignoreCase = true))
 
         val teacherName = item.teacher?.name?.takeIf { it.isNotBlank() }
@@ -34,6 +35,7 @@ class ClassAdapter(
         b.tvTeacher.text = teacherName?.let { ctx.getString(R.string.class_teacher_label, it) }
 
         b.tvStudents.text = ctx.getString(R.string.class_students_count, (item.studentCount ?: 0L).toInt())
+        b.tvCode.show(!showTeacher)
         b.tvCode.text = ctx.getString(R.string.class_code_label, item.classCode.orEmpty())
         b.root.setOnClickListener { onClick(item) }
     }

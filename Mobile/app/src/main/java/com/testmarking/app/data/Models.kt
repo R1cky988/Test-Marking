@@ -35,6 +35,8 @@ data class UserDto(
     val lastName: String? = null,
     val gender: String? = null,
     val role: String? = null,
+    /** path on the server ("/api/v1/user/avatars/..."), or null when there is no picture */
+    val avatarUrl: String? = null,
 )
 
 // ---- request bodies ----
@@ -51,6 +53,9 @@ data class RegisterBody(
     val dob: String,
     val gender: String,
 )
+
+data class UpdateProfileBody(val firstName: String, val lastName: String, val phoneNumber: String)
+data class UpdatePasswordBody(val oldPassword: String, val newPassword: String)
 
 data class VerifyBody(val email: String, val code: String)
 data class EmailBody(val email: String)
@@ -250,6 +255,10 @@ data class ExamItemDto(
     @SerializedName("to_time") val toTime: String? = null,
     @SerializedName("duration_minutes") val durationMinutes: Int? = null,
     @SerializedName("is_score_published") val isScorePublished: Boolean? = null,
+    /** only in GET exams (every exam of mine), not in the exams of one class */
+    @SerializedName("class_id") val classId: String? = null,
+    @SerializedName("class_name") val className: String? = null,
+    @SerializedName("my_role") val myRole: String? = null,
 )
 
 data class ClassExamsDto(

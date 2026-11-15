@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_edit">Chỉnh sửa hồ sơ</string>
+    <string name="profile_avatar">Ảnh đại diện</string>
+    <string name="edit_title">Chỉnh sửa hồ sơ</string>
+    <string name="edit_avatar_change">Đổi ảnh đại diện</string>
+    <string name="edit_avatar_hint">JPG, PNG hoặc WEBP, tối đa 2MB</string>
+    <string name="edit_avatar_failed">Không đọc được ảnh này, hãy chọn ảnh khác</string>
+    <string name="edit_avatar_done">Đã cập nhật ảnh đại diện</string>
+    <string name="edit_info_title">Thông tin cá nhân</string>
+    <string name="edit_info_email">Email: %1$s (không đổi được)</string>
+    <string name="edit_info_done">Đã cập nhật thông tin</string>
+    <string name="edit_password_title">Đổi mật khẩu</string>
+    <string name="edit_password_old">Mật khẩu hiện tại</string>
+    <string name="edit_password_new">Mật khẩu mới</string>
+    <string name="edit_password_helper">Tối thiểu 8 ký tự, gồm cả chữ và số</string>
+    <string name="edit_password_button">Đổi mật khẩu</string>
+    <string name="edit_password_done">Đã đổi mật khẩu</string>
+    <string name="err_password_weak">Mật khẩu cần ít nhất 8 ký tự, gồm cả chữ và số</string>
+    <string name="err_password_same">Mật khẩu mới phải khác mật khẩu hiện tại</string>
+</resources>

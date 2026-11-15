@@ -2,10 +2,17 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
-// 10.0.2.2 is the host machine as seen from the Android emulator. On a real phone use the
-// "Địa chỉ máy chủ" button on the login screen (e.g. http://192.168.1.10:8080).
-val debugApiBaseUrl = "http://10.247.110.193:8080/api/v1/"
-val releaseApiBaseUrl = "https://example.invalid/api/v1/"
+// Where the OpenCV Android SDK is (see settings.gradle.kts). The C++ part of the grading reads native/jni/OpenCVConfig.cmake from it.
+val opencvSdkDir = providers.gradleProperty("opencvSdkDir")
+    .orElse(rootProject.layout.projectDirectory.dir("opencv/sdk").asFile.absolutePath)
+
+// Address of the backend. 10.0.2.2 is the host machine as seen from the Android emulator. For a real phone build with the address
+// of the machine that runs the backend, e.g.  ./gradlew assembleDebug -PapiBaseUrl=http://192.168.1.10:8080/api/v1/
+// (or put  apiBaseUrl=...  in gradle.properties). The address is no longer typed in the app.
+val apiBaseUrl: String? = providers.gradleProperty("apiBaseUrl").orNull
+val debugApiBaseUrl = apiBaseUrl ?: "http://192.168.1.10/api/v1/"
+
+val releaseApiBaseUrl = apiBaseUrl ?: "https://example.invalid/api/v1/"
 
 android {
     namespace = "com.testmarking.app"
@@ -21,6 +28,20 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+                arguments += "-DOpenCV_DIR=${opencvSdkDir.get()}/native/jni"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     buildTypes {
@@ -69,6 +90,15 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.koin.android)
+
+    // Camera + OpenCV for grading a paper sheet
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.coil)
+    implementation(project(":opencv"))
 
     testImplementation(libs.junit)
 }

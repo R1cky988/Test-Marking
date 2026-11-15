@@ -23,15 +23,29 @@
             android:paddingEnd="20dp"
             android:paddingBottom="16dp">
 
-            <TextView
-                android:id="@+id/tvAvatar"
+            <FrameLayout
                 android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:background="@drawable/bg_avatar"
-                android:gravity="center"
-                android:textColor="@color/primary"
-                android:textSize="32sp"
-                android:textStyle="bold" />
+                android:layout_height="80dp">
+
+                <TextView
+                    android:id="@+id/tvAvatar"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:background="@drawable/bg_avatar"
+                    android:gravity="center"
+                    android:textColor="@color/primary"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivAvatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/profile_avatar"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone"
+                    app:shapeAppearanceOverlay="@style/TM.ShapeCircle" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/tvName"
@@ -85,36 +99,18 @@
                         android:textSize="15sp" />
                 </LinearLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/border" />
-
-                <LinearLayout
-                    android:id="@+id/rowServer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        style="@style/TM.Text.Label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/profile_server" />
-
-                    <TextView
-                        android:id="@+id/tvServer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:textSize="15sp" />
-                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditProfile"
+            style="@style/TM.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp"
+            android:text="@string/profile_edit" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"
@@ -122,7 +118,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="12dp"
             android:layout_marginEnd="16dp"
             android:text="@string/profile_logout"
             android:textColor="@color/danger"

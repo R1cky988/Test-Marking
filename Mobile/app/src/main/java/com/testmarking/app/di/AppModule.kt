@@ -6,7 +6,12 @@ import com.testmarking.app.data.AuthApi
 import com.testmarking.app.data.ClassApi
 import com.testmarking.app.data.ExamApi
 import com.testmarking.app.data.local.AttemptStore
+import com.testmarking.app.repository.ExamsRepository
+import com.testmarking.app.repository.GradingRepository
+import com.testmarking.app.ui.exams.CreateExamViewModel
+import com.testmarking.app.ui.exams.ExamsViewModel
 import com.testmarking.app.repository.OnlineExamRepository
+import com.testmarking.app.ui.grade.GradeViewModel
 import com.testmarking.app.ui.exam.ExamManageViewModel
 import com.testmarking.app.ui.exam.TakeExamViewModel
 import com.testmarking.app.data.RefreshApi
@@ -20,6 +25,7 @@ import com.testmarking.app.repository.ClassRepository
 import com.testmarking.app.ui.classes.ClassDetailViewModel
 import com.testmarking.app.ui.classes.ClassListViewModel
 import com.testmarking.app.ui.login.LoginViewModel
+import com.testmarking.app.ui.profile.EditProfileViewModel
 import com.testmarking.app.ui.profile.ProfileViewModel
 import com.testmarking.app.ui.register.RegisterViewModel
 import com.testmarking.app.ui.verify.VerifyEmailViewModel
@@ -93,6 +99,8 @@ val appModule = module {
     single { AuthRepository(get(), get()) }
     single { ClassRepository(get()) }
     single { OnlineExamRepository(get(), get(), get(), get()) }
+    single { GradingRepository(androidContext(), get(), get()) }
+    single { ExamsRepository(get(), get()) }
 
     viewModel { LoginViewModel(get()) }
     viewModel { RegisterViewModel(get()) }
@@ -101,5 +109,9 @@ val appModule = module {
     viewModel { (classId: String) -> ClassDetailViewModel(classId, get()) }
     viewModel { (examId: String) -> TakeExamViewModel(examId, get()) }
     viewModel { (examId: String) -> ExamManageViewModel(examId, get()) }
+    viewModel { (examId: String, templateId: String) -> GradeViewModel(examId, templateId, get()) }
+    viewModel { (scope: String) -> ExamsViewModel(scope, get()) }
+    viewModel { CreateExamViewModel(get()) }
     viewModel { ProfileViewModel(get()) }
+    viewModel { EditProfileViewModel(get()) }
 }

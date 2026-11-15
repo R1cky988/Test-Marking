@@ -10,22 +10,18 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.testmarking.app.R
-import com.testmarking.app.data.ServerConfig
 import com.testmarking.app.databinding.FragmentLoginBinding
 import com.testmarking.app.util.applyStatusBarInset
 import com.testmarking.app.util.clearErrorOnEdit
 import com.testmarking.app.util.collectOnStarted
 import com.testmarking.app.util.hideKeyboard
 import com.testmarking.app.util.show
-import com.testmarking.app.util.showServerDialog
-import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
     private val viewModel: LoginViewModel by viewModel()
-    private val serverConfig: ServerConfig by inject()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
@@ -48,7 +44,6 @@ class LoginFragment : Fragment() {
             }
         }
         binding.btnRegister.setOnClickListener { findNavController().navigate(R.id.action_login_to_register) }
-        binding.btnServer.setOnClickListener { showServerDialog(serverConfig) }
 
         collectOnStarted(viewModel.state) { render(it) }
         collectOnStarted(viewModel.events) { handle(it) }

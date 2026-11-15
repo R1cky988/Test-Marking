@@ -99,9 +99,38 @@
     </fragment>
 
     <fragment
+        android:id="@+id/examsFragment"
+        android:name="com.testmarking.app.ui.exams.ExamsFragment"
+        android:label="Exams">
+        <action
+            android:id="@+id/action_exams_to_exam_manage"
+            app:destination="@id/examManageFragment" />
+        <action
+            android:id="@+id/action_exams_to_take_exam"
+            app:destination="@id/takeExamFragment" />
+        <action
+            android:id="@+id/action_exams_to_create_exam"
+            app:destination="@id/createExamFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/createExamFragment"
+        android:name="com.testmarking.app.ui.exams.CreateExamFragment"
+        android:label="Create exam" />
+
+    <fragment
         android:id="@+id/profileFragment"
         android:name="com.testmarking.app.ui.profile.ProfileFragment"
-        android:label="Profile" />
+        android:label="Profile">
+        <action
+            android:id="@+id/action_profile_to_edit_profile"
+            app:destination="@id/editProfileFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editProfileFragment"
+        android:name="com.testmarking.app.ui.profile.EditProfileFragment"
+        android:label="Edit profile" />
 
     <fragment
         android:id="@+id/classDetailFragment"
@@ -133,6 +162,25 @@
         android:label="Exam detail">
         <argument
             android:name="examId"
+            app:argType="string" />
+        <argument
+            android:name="examName"
+            android:defaultValue=""
+            app:argType="string" />
+        <action
+            android:id="@+id/action_exam_manage_to_grade"
+            app:destination="@id/gradeFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/gradeFragment"
+        android:name="com.testmarking.app.ui.grade.GradeFragment"
+        android:label="Grade">
+        <argument
+            android:name="examId"
+            app:argType="string" />
+        <argument
+            android:name="templateId"
             app:argType="string" />
         <argument
             android:name="examName"

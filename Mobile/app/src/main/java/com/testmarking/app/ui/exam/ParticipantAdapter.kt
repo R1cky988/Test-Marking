@@ -14,7 +14,6 @@ import java.util.Locale
 
 class ParticipantAdapter(
     private val onUnlock: (ParticipantDto) -> Unit,
-    private val onDecide: (ParticipantDto) -> Unit,
 ) : ListAdapter<ParticipantDto, ParticipantAdapter.Holder>(Diff) {
 
     /** the student being unlocked right now (his button is off) */
@@ -36,9 +35,8 @@ class ParticipantAdapter(
         b.tvName.text = p.fullName.orEmpty()
         b.tvStatus.text = ctx.getString(
             when {
-                p.hasResult == true && p.isViolation == true -> R.string.manage_status_violation
+                p.isViolation == true -> R.string.manage_status_violation
                 p.attemptStatus == "LOCKED" -> R.string.manage_status_locked
-                p.isFlagged == true && p.flagDecision == null -> R.string.manage_status_flagged
                 p.attemptStatus == "IN_PROGRESS" -> R.string.manage_status_in_progress
                 p.hasResult == true || p.attemptStatus == "SUBMITTED" -> R.string.manage_status_submitted
                 p.attemptStatus == "NOT_STARTED" -> R.string.manage_status_not_started
@@ -50,17 +48,6 @@ class ParticipantAdapter(
         if (p.hasResult == true) {
             lines.add(ctx.getString(R.string.manage_line_score, p.totalScore?.let { String.format(Locale("vi", "VN"), "%.2f", it) } ?: "—"))
         }
-        if (p.isFlagged == true) {
-            lines.add(ctx.getString(R.string.manage_line_flag, p.flagReason.orEmpty()))
-            lines.add(
-                when (p.flagDecision) {
-                    "ZERO" -> ctx.getString(R.string.manage_flag_zero)
-                    "DEDUCT" -> ctx.getString(R.string.manage_flag_deduct, String.format(Locale("vi", "VN"), "%.2f", p.penaltyPoints ?: 0.0))
-                    "DISMISS" -> ctx.getString(R.string.manage_flag_dismiss)
-                    else -> ctx.getString(R.string.manage_flag_pending)
-                },
-            )
-        }
         p.leftCount?.takeIf { it > 0 }?.let { lines.add(ctx.getString(R.string.manage_line_left, it)) }
         // when the system marked the paper, and (online) when the phone's copy reached it
         p.gradedAt?.let { lines.add(ctx.getString(R.string.manage_line_graded, TimeFormat.dateTime(it))) }
@@ -71,9 +58,6 @@ class ParticipantAdapter(
         b.tvDetail.text = lines.joinToString("\n")
         b.tvDetail.show(lines.isNotEmpty())
         val locked = p.attemptStatus == "LOCKED"
-        b.btnDecide.show(p.isFlagged == true)
-        b.btnDecide.isEnabled = unlocking != p.studentId
-        b.btnDecide.setOnClickListener { onDecide(p) }
         b.btnUnlock.show(locked)
         b.btnUnlock.isEnabled = unlocking != p.studentId
         b.btnUnlock.setOnClickListener { onUnlock(p) }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="grade_open">Chấm bài bằng camera</string>
+    <string name="grade_title">Chấm phiếu</string>
+    <string name="grade_count">Đã chấm %1$d</string>
+    <string name="grade_preparing">Đang tải mẫu phiếu và đáp án…</string>
+    <string name="grade_hint">Đặt cả tờ phiếu trong khung, đủ sáng, thấy rõ 12 ô vuông đen ở mép giấy.</string>
+    <string name="grade_capture">Chụp</string>
+    <string name="grade_gallery">Chọn ảnh</string>
+    <string name="grade_no_camera">Chưa có quyền dùng camera. Bạn vẫn có thể chọn ảnh phiếu từ thư viện.</string>
+    <string name="grade_camera_error">Không mở được camera: %1$s</string>
+    <string name="grade_reading">Đang đọc phiếu…</string>
+    <string name="grade_sheet_image">Ảnh phiếu đã đọc</string>
+    <string name="grade_student_code">Mã học sinh (HSxxxxxxxx)</string>
+    <string name="grade_test_code">Mã đề (3 chữ số)</string>
+    <string name="grade_retake">Chụp lại</string>
+    <string name="grade_save">Lưu điểm</string>
+    <string name="grade_summary_read">Đã đọc %1$d/%2$d câu.</string>
+    <string name="grade_summary_blank">Câu bỏ trống: %1$s.</string>
+    <string name="grade_summary_doubtful">Câu tô nhiều ô, cần kiểm tra: %1$s.</string>
+    <string name="grade_saved_title">Đã lưu bài của %1$s</string>
+    <string name="grade_saved_body">Đúng %1$d/%2$d câu · %3$s điểm</string>
+    <string name="grade_saved_violation">Bài đang bị ghi vi phạm nên tính 0 điểm.</string>
+    <string name="grade_saved_no_image">Điểm đã lưu nhưng chưa gắn được ảnh phiếu.</string>
+    <string name="grade_next">Chấm phiếu tiếp theo</string>
+    <string name="grade_no_template">Kỳ thi này chưa gắn mẫu phiếu nên chưa chấm bằng camera được.</string>
+</resources>

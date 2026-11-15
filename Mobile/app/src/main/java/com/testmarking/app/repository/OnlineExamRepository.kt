@@ -36,9 +36,6 @@ class OnlineExamRepository(
     // ---- teacher + intro ----
     suspend fun detail(examId: String): Result<ExamDetailDto> = apiCall { api.detail(examId).requireData() }
     suspend fun participants(examId: String): Result<List<ParticipantDto>> = apiCall { api.participants(examId).requireData() }
-    suspend fun decideFlag(examId: String, studentId: String, decision: String, points: Double?): Result<ParticipantDto> =
-        apiCall { api.decideFlag(examId, com.testmarking.app.data.FlagDecisionBody(studentId, decision, points)).requireData() }
-
     suspend fun unlock(examId: String, studentId: String): Result<ParticipantDto> = apiCall { api.unlock(examId, studentId).requireData() }
 
     // ---- the phone's copy ----

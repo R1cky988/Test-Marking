@@ -15,6 +15,11 @@ class ProfileViewModel(private val repo: AuthRepository) : ViewModel() {
     val user: StateFlow<UserDto?> = _user.asStateFlow()
 
     init {
+        refresh()
+    }
+
+    fun refresh() {
+        _user.value = repo.cachedUser() ?: _user.value
         viewModelScope.launch {
             repo.loadProfile().onSuccess { _user.value = it }
         }

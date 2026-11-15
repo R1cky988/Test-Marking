@@ -1,7 +1,10 @@
 package com.testmarking.app.data
 
 import retrofit2.Call
+import okhttp3.MultipartBody
 import retrofit2.http.Body
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -24,6 +27,18 @@ interface AuthApi {
 
     @GET("user/me")
     suspend fun me(): ApiEnvelope<UserDto>
+
+    /** Answers with NEW tokens (the token is made for the account); keep them. */
+    @PUT("user/update-profile")
+    suspend fun updateProfile(@Body body: UpdateProfileBody): ApiEnvelope<TokenPair>
+
+    @PUT("user/update-password")
+    suspend fun updatePassword(@Body body: UpdatePasswordBody): ApiEnvelope<Any>
+
+    /** multipart "file": a JPEG/PNG up to 2 MB; answers the profile with the new avatarUrl */
+    @Multipart
+    @POST("user/avatar")
+    suspend fun avatar(@Part file: MultipartBody.Part): ApiEnvelope<UserDto>
 }
 
 /** Used only by TokenAuthenticator (blocking call, its own client without the authenticator). */

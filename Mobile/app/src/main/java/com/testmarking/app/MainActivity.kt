@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     private val session: SessionStore by inject()
 
     /** Screens that show the bottom bar. Everything else (login, detail, ...) hides it. */
-    private val topLevel = setOf(R.id.classesTeachingFragment, R.id.classesLearningFragment, R.id.profileFragment)
+    private val topLevel = setOf(R.id.classesTeachingFragment, R.id.classesLearningFragment, R.id.examsFragment, R.id.profileFragment)
 
     /** Screens that start with the blue header: the status bar icons must be white there. */
     private val darkHeader = setOf(R.id.loginFragment, R.id.registerFragment, R.id.verifyEmailFragment, R.id.splashFragment)

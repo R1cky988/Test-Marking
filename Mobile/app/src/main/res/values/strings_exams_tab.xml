@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_exams_bottom">Kỳ thi</string>
+    <string name="exams_tab_title">Kỳ thi</string>
+    <string name="exams_tab_subtitle">Kỳ thi của tất cả các lớp</string>
+    <string name="exams_scope_teacher">Tôi tạo</string>
+    <string name="exams_scope_student">Tôi tham gia</string>
+    <string name="exams_create">Tạo kỳ thi</string>
+    <string name="exams_tab_empty_teacher">Bạn chưa tạo kỳ thi nào</string>
+    <string name="exams_tab_empty_teacher_hint">Bấm “Tạo kỳ thi” để bắt đầu.</string>
+    <string name="exams_tab_empty_student">Chưa có kỳ thi nào</string>
+    <string name="exams_tab_empty_student_hint">Kỳ thi của các lớp bạn tham gia sẽ hiện ở đây.</string>
+
+    <!-- create an exam -->
+    <string name="create_title">Tạo kỳ thi</string>
+    <string name="create_name">Tên kỳ thi</string>
+    <string name="create_subject">Môn học (không bắt buộc)</string>
+    <string name="create_class">Lớp</string>
+    <string name="create_class_none">Bạn chưa có lớp nào đang hoạt động để tạo kỳ thi</string>
+    <string name="create_format">Hình thức</string>
+    <string name="create_format_offline">Thi giấy</string>
+    <string name="create_format_submit">Chụp nộp</string>
+    <string name="create_format_online">Online</string>
+    <string name="create_format_hint_offline">Thi trên giấy, giáo viên chụp phiếu để chấm.</string>
+    <string name="create_format_hint_submit">Học sinh làm trên giấy rồi tự chụp phiếu để nộp.</string>
+    <string name="create_format_hint_online">Học sinh làm bài trên điện thoại trong ứng dụng.</string>
+    <string name="create_from">Bắt đầu</string>
+    <string name="create_to">Kết thúc</string>
+    <string name="create_duration">Thời lượng làm bài (phút)</string>
+    <string name="create_duration_online">Thời lượng làm bài (phút) *</string>
+    <string name="create_reference">Cho phép tra cứu tài liệu</string>
+    <string name="create_reference_hint">Bật: thoát màn hình làm bài không bị ghi vi phạm. Tắt: thoát màn hình bị ghi vi phạm (0 điểm) và mặc định không hiện kết quả sau khi nộp.</string>
+    <string name="create_show_result">Hiện kết quả ngay sau khi nộp</string>
+    <string name="create_leave">Khi học sinh thoát màn hình</string>
+    <string name="create_leave_flag">Vẫn làm tiếp</string>
+    <string name="create_leave_lock">Khóa bài</string>
+    <string name="create_template">Mẫu phiếu trả lời</string>
+    <string name="create_bank">Ngân hàng câu hỏi</string>
+    <string name="create_versions_title">Mã đề</string>
+    <string name="create_versions_count">Số mã đề</string>
+    <string name="create_easy">Dễ</string>
+    <string name="create_medium">Trung bình</string>
+    <string name="create_hard">Khó</string>
+    <string name="create_bank_available">Ngân hàng có: %1$d dễ · %2$d trung bình · %3$d khó</string>
+    <string name="create_save_draft">Lưu nháp</string>
+    <string name="create_publish">Tạo và công bố</string>
+    <string name="create_done_draft">Đã lưu nháp kỳ thi</string>
+    <string name="create_done_published">Đã tạo và công bố kỳ thi</string>
+    <string name="create_err_name">Hãy nhập tên kỳ thi</string>
+    <string name="create_err_class">Hãy chọn lớp</string>
+    <string name="create_err_from">Hãy chọn thời gian bắt đầu</string>
+    <string name="create_err_to">Hãy chọn thời gian kết thúc</string>
+    <string name="create_err_order">Thời gian kết thúc phải sau thời gian bắt đầu</string>
+    <string name="create_err_duration">Kỳ thi online cần thời lượng làm bài (phút)</string>
+    <string name="create_err_duration_long">Thời lượng làm bài không được dài hơn khoảng từ lúc bắt đầu đến lúc kết thúc</string>
+    <string name="create_err_template">Kỳ thi trên giấy cần chọn mẫu phiếu</string>
+    <string name="create_err_bank">Hãy chọn ngân hàng câu hỏi để tạo mã đề</string>
+    <string name="create_err_counts">Mỗi mã đề cần ít nhất 1 câu (dễ, trung bình hoặc khó)</string>
+    <string name="create_err_counts_bank">Ngân hàng chỉ có %1$d câu dễ, %2$d trung bình, %3$d khó</string>
+    <string name="create_err_counts_template">Mỗi mã đề có %1$d câu nhưng mẫu phiếu chỉ có %2$d câu</string>
+    <string name="create_err_publish_versions">Muốn công bố, hãy tạo ít nhất 1 mã đề</string>
+    <string name="create_loading_options">Đang tải lớp, mẫu phiếu và ngân hàng câu hỏi…</string>
+</resources>

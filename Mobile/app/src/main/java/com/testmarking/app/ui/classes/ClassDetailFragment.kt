@@ -30,6 +30,7 @@ import com.testmarking.app.data.PostDto
 import com.testmarking.app.databinding.DialogPostBinding
 import com.testmarking.app.databinding.FragmentClassDetailBinding
 import com.testmarking.app.databinding.SheetCommentsBinding
+import com.testmarking.app.ui.exam.ExamOpener
 import com.testmarking.app.util.TimeFormat
 import com.testmarking.app.util.applyStatusBarInset
 import com.testmarking.app.util.collectOnStarted
@@ -107,6 +108,9 @@ class ClassDetailFragment : Fragment() {
     private fun render(state: ClassDetailState) {
         val b = _binding ?: return
         val tab = viewModel.tab
+        // the teacher sees at a glance that somebody waits for approval
+        binding.tabs.getTabAt(TAB_MEMBERS)?.text =
+            if (state.isTeacher && state.requests.isNotEmpty()) getString(R.string.tab_members_pending, state.requests.size) else getString(R.string.tab_members)
         val info = state.info.data
         b.tvTitle.text = info?.className?.takeIf { it.isNotBlank() } ?: getString(R.string.detail_title)
 
@@ -225,6 +229,8 @@ class ClassDetailFragment : Fragment() {
         b.tvSubject.text = data.subject?.takeIf { it.isNotBlank() } ?: "—"
         b.tvTeacher.text = data.teacher?.name?.takeIf { it.isNotBlank() } ?: "—"
         b.tvStudents.text = (data.studentCount ?: 0L).toString()
+        b.labelClassCode.show(state.isTeacher)
+        b.tvClassCode.show(state.isTeacher)
         b.tvClassCode.text = data.classCode.orEmpty()
 
         val joinCode = data.joinCode
@@ -372,42 +378,9 @@ class ClassDetailFragment : Fragment() {
 
     // ------------------------------------------------------------------ exams
 
-    /**
-     * The teacher opens the detail of the exam (who is where, marked / synced times, unlock). A student opens an ONLINE exam
-     * to take it; other formats only show the information.
-     */
-    private fun openExam(exam: ExamItemDto) {
-        val id = exam.id
-        if (id.isNullOrBlank()) return showExamInfo(exam)
-        val nav = findNavController()
-        when {
-            viewModel.isTeacher && exam.status != "DRAFT" -> nav.navigate(
-                R.id.action_class_detail_to_exam_manage,
-                androidx.core.os.bundleOf("examId" to id, "examName" to exam.name.orEmpty()),
-            )
-            !viewModel.isTeacher && exam.format.equals("ONLINE", ignoreCase = true) && exam.status != "CANCELLED" ->
-                nav.navigate(R.id.action_class_detail_to_take_exam, androidx.core.os.bundleOf("examId" to id))
-            else -> showExamInfo(exam)
-        }
-    }
-
-    private fun showExamInfo(exam: ExamItemDto) {
-        val lines = ArrayList<String>()
-        exam.subject?.takeIf { it.isNotBlank() }?.let { lines.add(it) }
-        lines.add(ClassLabels.format(requireContext(), exam.format))
-        lines.add(ClassLabels.examStatus(requireContext(), exam.status))
-        lines.add(getString(R.string.exams_from, TimeFormat.dateTime(exam.fromTime)))
-        lines.add(getString(R.string.exams_to, TimeFormat.dateTime(exam.toTime)))
-        exam.durationMinutes?.let { lines.add(getString(R.string.exams_duration, it)) }
-        exam.isScorePublished?.let {
-            lines.add(getString(if (it) R.string.exams_published else R.string.exams_not_published))
-        }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(exam.name.orEmpty())
-            .setMessage(lines.joinToString("\n"))
-            .setPositiveButton(R.string.common_confirm, null)
-            .show()
-    }
+    private fun openExam(exam: ExamItemDto) = ExamOpener.open(
+        this, exam, viewModel.isTeacher, R.id.action_class_detail_to_exam_manage, R.id.action_class_detail_to_take_exam,
+    )
 
     // ------------------------------------------------------------------ members
 

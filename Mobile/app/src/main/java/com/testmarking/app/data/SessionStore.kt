@@ -28,6 +28,7 @@ class SessionStore(context: Context) {
             .putString(KEY_PHONE, user.phoneNumber)
             .putString(KEY_FIRST, user.firstName)
             .putString(KEY_LAST, user.lastName)
+            .putString(KEY_AVATAR, user.avatarUrl)
             .apply()
     }
 
@@ -38,6 +39,7 @@ class SessionStore(context: Context) {
             phoneNumber = prefs.getString(KEY_PHONE, null),
             firstName = prefs.getString(KEY_FIRST, null),
             lastName = prefs.getString(KEY_LAST, null),
+            avatarUrl = prefs.getString(KEY_AVATAR, null),
         )
     }
 
@@ -58,5 +60,6 @@ class SessionStore(context: Context) {
         const val KEY_PHONE = "phone"
         const val KEY_FIRST = "first_name"
         const val KEY_LAST = "last_name"
+        const val KEY_AVATAR = "avatar_url"
     }
 }

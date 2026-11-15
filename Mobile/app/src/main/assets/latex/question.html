@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="katex/katex.min.css">
+<style>
+  :root { --fg:#121417; --muted:#66696f; --border:#dcdee1; --primary:#0077c2; --soft:#def6ff; --bg:#f5f7f9; }
+  body.dark { --fg:#ecf0f2; --muted:#a1a5ab; --border:#303338; --primary:#5eaceb; --soft:#0f304a; --bg:#0d1014; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 -apple-system, Roboto, "Segoe UI", sans-serif; }
+  #root { padding: 16px 20px 24px; }
+  .q { overflow-wrap: anywhere; }
+  .hint { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .opts { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1.5px solid var(--border); border-radius: 12px; background: transparent; }
+  .opt.on { border-color: var(--primary); background: var(--soft); }
+  .badge { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); display: grid; place-items: center; font-size: 14px; font-weight: 700; color: var(--muted); }
+  .multi .badge { border-radius: 8px; }
+  .opt.on .badge { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
+  .katex-display { margin: 8px 0; overflow-x: auto; overflow-y: hidden; }
+  .katex { font-size: 1.08em; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="katex/katex.min.js"></script>
+<script>
+// Same rules as the web app (renderLatex.ts): $..$ and \(..\) inline, $$..$$ and \[..\] display, \$ is a dollar sign,
+// everything outside of math is escaped text, line breaks become <br>.
+var DELIMS = [
+  { open: "$$", close: "$$", display: true },
+  { open: "\\[", close: "\\]", display: true },
+  { open: "\\(", close: "\\)", display: false },
+  { open: "$", close: "$", display: false }
+];
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function findClose(src, close, from) {
+  for (var i = from; i < src.length; i++) {
+    if (src[i] === "\\" && close !== "\\]" && close !== "\\)") { i++; continue; }
+    if (src.startsWith(close, i)) return i;
+  }
+  return -1;
+}
+function splitLatex(src) {
+  var parts = [], text = "", i = 0;
+  function flush() { if (text) { parts.push({ kind: "text", value: text }); text = ""; } }
+  while (i < src.length) {
+    if (src.startsWith("\\$", i)) { text += "$"; i += 2; continue; }
+    var d = null;
+    for (var k = 0; k < DELIMS.length; k++) { if (src.startsWith(DELIMS[k].open, i)) { d = DELIMS[k]; break; } }
+    if (d) {
+      var start = i + d.open.length, end = findClose(src, d.close, start);
+      var body = end < 0 ? "" : src.slice(start, end);
+      var valid = end >= 0 && body.trim() !== "" && (d.display || d.open !== "$" || (!/^\s/.test(body) && !/\s$/.test(body)));
+      if (valid) { flush(); parts.push({ kind: "math", value: body, display: d.display }); i = end + d.close.length; continue; }
+    }
+    text += src[i]; i++;
+  }
+  flush();
+  return parts;
+}
+function latexHtml(src) {
+  if (!src) return "";
+  return splitLatex(src).map(function (p) {
+    if (p.kind === "text") return esc(p.value).replace(/\r?\n/g, "<br>");
+    try { return katex.renderToString(p.value, { displayMode: p.display, throwOnError: false, trust: false, strict: "ignore", output: "html" }); }
+    catch (e) { return '<span style="color:#c53637">' + esc(p.value) + "</span>"; }
+  }).join("");
+}
+
+// payload = { order, content, multiple, hint, dark, options: [{label, content}], chosen: ["A"] }
+window.renderQuestion = function (payload) {
+  document.body.className = payload.dark ? "dark" : "";
+  var chosen = {}; (payload.chosen || []).forEach(function (l) { chosen[l] = true; });
+  var html = '<div class="q">' + latexHtml(payload.content) + "</div>";
+  if (payload.hint) html += '<div class="hint">' + esc(payload.hint).replace(/\n/g, "<br>") + "</div>";
+  html += '<div class="opts' + (payload.multiple ? " multi" : "") + '" role="' + (payload.multiple ? "group" : "radiogroup") + '">';
+  (payload.options || []).forEach(function (o) {
+    html += '<div class="opt' + (chosen[o.label] ? " on" : "") + '" data-label="' + esc(o.label) + '" role="' + (payload.multiple ? "checkbox" : "radio") +
+      '" aria-checked="' + (chosen[o.label] ? "true" : "false") + '" tabindex="0"><div class="badge">' + esc(o.label) +
+      '</div><div class="txt">' + latexHtml(o.content) + "</div></div>";
+  });
+  html += "</div>";
+  var root = document.getElementById("root");
+  root.innerHTML = html;
+  window.scrollTo(0, 0);
+  Array.prototype.forEach.call(root.querySelectorAll(".opt"), function (el) {
+    el.addEventListener("click", function () {
+      var label = el.getAttribute("data-label");
+      if (payload.multiple) {
+        el.classList.toggle("on");
+      } else {
+        Array.prototype.forEach.call(root.querySelectorAll(".opt"), function (x) { x.classList.remove("on"); });
+        el.classList.add("on");
+      }
+      Array.prototype.forEach.call(root.querySelectorAll(".opt"), function (x) { x.setAttribute("aria-checked", x.classList.contains("on") ? "true" : "false"); });
+      if (window.Android && window.Android.choose) window.Android.choose(label);
+    });
+  });
+};
+// tell the app the page is ready to receive a question
+if (window.Android && window.Android.ready) window.Android.ready();
+</script>
+</body>
+</html>

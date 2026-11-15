@@ -9,6 +9,10 @@
         android:icon="@drawable/ic_school"
         android:title="@string/tab_learning" />
     <item
+        android:id="@+id/examsFragment"
+        android:icon="@drawable/ic_calendar"
+        android:title="@string/tab_exams_bottom" />
+    <item
         android:id="@+id/profileFragment"
         android:icon="@drawable/ic_person"
         android:title="@string/tab_profile" />

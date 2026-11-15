@@ -9,19 +9,16 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.testmarking.app.BuildConfig
 import com.testmarking.app.R
-import com.testmarking.app.data.ServerConfig
 import com.testmarking.app.databinding.FragmentProfileBinding
 import com.testmarking.app.util.applyStatusBarInset
 import com.testmarking.app.util.collectOnStarted
-import com.testmarking.app.util.showServerDialog
-import org.koin.android.ext.android.inject
+import com.testmarking.app.util.loadAvatar
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ProfileViewModel by viewModel()
-    private val serverConfig: ServerConfig by inject()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
@@ -32,11 +29,8 @@ class ProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.header.applyStatusBarInset()
         binding.tvVersion.text = getString(R.string.profile_version, BuildConfig.VERSION_NAME)
-        binding.tvServer.text = serverConfig.displayUrl()
 
-        binding.rowServer.setOnClickListener {
-            showServerDialog(serverConfig) { binding.tvServer.text = serverConfig.displayUrl() }
-        }
+        binding.btnEditProfile.setOnClickListener { findNavController().navigate(R.id.action_profile_to_edit_profile) }
         binding.btnLogout.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.profile_logout)
@@ -55,7 +49,14 @@ class ProfileFragment : Fragment() {
             binding.tvEmail.text = user?.email.orEmpty()
             binding.tvPhone.text = user?.phoneNumber?.takeIf { it.isNotBlank() } ?: "—"
             binding.tvAvatar.text = name.firstOrNull { it.isLetter() }?.uppercaseChar()?.toString() ?: "?"
+            binding.ivAvatar.loadAvatar(user?.avatarUrl)
         }
+    }
+
+    /** Back from the edit screen: show the new name and picture. */
+    override fun onResume() {
+        super.onResume()
+        viewModel.refresh()
     }
 
     override fun onDestroyView() {

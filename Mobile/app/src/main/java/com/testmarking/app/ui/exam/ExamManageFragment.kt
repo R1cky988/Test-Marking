@@ -34,7 +34,7 @@ class ExamManageFragment : Fragment() {
         binding.header.applyStatusBarInset()
         binding.tvTitle.text = requireArguments().getString("examName").takeUnless { it.isNullOrBlank() } ?: getString(R.string.manage_title)
         binding.btnBack.setOnClickListener { findNavController().popBackStack() }
-        adapter = ParticipantAdapter(onUnlock = { viewModel.unlock(it.studentId.orEmpty()) }, onDecide = { askDecision(it) })
+        adapter = ParticipantAdapter { viewModel.unlock(it.studentId.orEmpty()) }
         binding.list.layoutManager = LinearLayoutManager(requireContext())
         binding.list.adapter = adapter
 
@@ -43,6 +43,20 @@ class ExamManageFragment : Fragment() {
             b.progress.visibility = if (s.loading || s.unlocking != null) View.VISIBLE else View.INVISIBLE
             b.tvError.show(s.error != null)
             b.tvError.text = s.error.orEmpty()
+            // Papers (OFFLINE and SUBMIT exams) are marked from a photo of the sheet; an ONLINE exam is marked by the server alone.
+            val grading = s.detail?.takeIf { !it.format.equals("ONLINE", ignoreCase = true) }
+            b.btnGrade.show(grading != null)
+            b.btnGrade.setOnClickListener {
+                val d = grading ?: return@setOnClickListener
+                if (d.templateId.isNullOrBlank()) {
+                    Toast.makeText(requireContext(), R.string.grade_no_template, Toast.LENGTH_LONG).show()
+                } else {
+                    findNavController().navigate(
+                        R.id.action_exam_manage_to_grade,
+                        androidx.core.os.bundleOf("examId" to d.id.orEmpty().ifBlank { requireArguments().getString("examId").orEmpty() }, "templateId" to d.templateId, "examName" to d.name.orEmpty()),
+                    )
+                }
+            }
             s.detail?.let { d ->
                 b.tvInfo.text = getString(R.string.manage_info, ClassLabels.format(requireContext(), d.format), TimeFormat.dateTime(d.fromTime), TimeFormat.dateTime(d.toTime))
             }
@@ -53,44 +67,6 @@ class ExamManageFragment : Fragment() {
                 viewModel.messageShown()
             }
         }
-    }
-
-    /** The teacher decides a paper reported for leaving the exam screen: 0 points, minus points, or nothing. */
-    private fun askDecision(p: com.testmarking.app.data.ParticipantDto) {
-        val id = p.studentId.orEmpty()
-        val items = arrayOf(getString(R.string.manage_decide_zero), getString(R.string.manage_decide_deduct), getString(R.string.manage_decide_dismiss))
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle(getString(R.string.manage_decide_title, p.fullName.orEmpty()))
-            .setMessage(getString(R.string.manage_line_flag, p.flagReason.orEmpty()))
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> viewModel.decide(id, "ZERO")
-                    1 -> askPenalty(id)
-                    else -> viewModel.decide(id, "DISMISS")
-                }
-            }
-            .setNegativeButton(R.string.common_cancel, null)
-            .show()
-    }
-
-    private fun askPenalty(studentId: String) {
-        val input = android.widget.EditText(requireContext()).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            hint = getString(R.string.manage_penalty_hint)
-        }
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.manage_decide_deduct)
-            .setView(input)
-            .setPositiveButton(R.string.common_confirm) { _, _ ->
-                val points = input.text.toString().replace(',', '.').toDoubleOrNull()
-                if (points == null || points <= 0) {
-                    Toast.makeText(requireContext(), R.string.manage_penalty_invalid, Toast.LENGTH_LONG).show()
-                } else {
-                    viewModel.decide(studentId, "DEDUCT", points)
-                }
-            }
-            .setNegativeButton(R.string.common_cancel, null)
-            .show()
     }
 
     /** A student may have locked or synced meanwhile: refresh when the teacher comes back to the screen. */

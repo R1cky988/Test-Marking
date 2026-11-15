@@ -47,9 +47,9 @@ class ExamAdapter(
                 val e = row.exam
                 b.tvName.text = e.name.orEmpty()
                 b.tvStatus.text = ClassLabels.examStatus(ctx, e.status)
-                val subject = e.subject?.takeIf { it.isNotBlank() }
-                val format = ClassLabels.format(ctx, e.format)
-                b.tvMeta.text = if (subject != null) "$subject · $format" else format
+                b.tvMeta.text = listOfNotNull(
+                    e.className?.takeIf { it.isNotBlank() }, e.subject?.takeIf { it.isNotBlank() }, ClassLabels.format(ctx, e.format),
+                ).joinToString(" · ")
                 b.tvTime.text = "${TimeFormat.dateTime(e.fromTime)} – ${TimeFormat.dateTime(e.toTime)}"
                 b.root.setOnClickListener { onClick(e) }
             }

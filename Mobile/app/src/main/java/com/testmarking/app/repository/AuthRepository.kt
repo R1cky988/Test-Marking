@@ -6,6 +6,8 @@ import com.testmarking.app.data.LoginBody
 import com.testmarking.app.data.RegisterBody
 import com.testmarking.app.data.SessionStore
 import com.testmarking.app.data.TokenPair
+import com.testmarking.app.data.UpdatePasswordBody
+import com.testmarking.app.data.UpdateProfileBody
 import com.testmarking.app.data.UserDto
 import com.testmarking.app.data.VerifyBody
 import com.testmarking.app.network.ApiException
@@ -14,6 +16,9 @@ import com.testmarking.app.network.apiCall
 import com.testmarking.app.network.ensureOk
 import com.testmarking.app.network.requireData
 import kotlinx.coroutines.CancellationException
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class AuthRepository(
     private val api: AuthApi,
@@ -43,6 +48,25 @@ class AuthRepository(
     /** Cached profile first (cachedUser), then call this to refresh it. */
     suspend fun loadProfile(): Result<UserDto> = apiCall {
         api.me().requireData().also { session.saveUser(it) }
+    }
+
+    /** First name, last name, phone. The e-mail stays: it is the login (and the key of the exam papers kept on this phone). */
+    suspend fun updateProfile(firstName: String, lastName: String, phone: String): Result<UserDto> = apiCall {
+        val tokens = api.updateProfile(UpdateProfileBody(firstName, lastName, phone)).data
+        val access = tokens?.accessToken
+        val refresh = tokens?.refreshToken
+        if (!access.isNullOrBlank() && !refresh.isNullOrBlank()) session.saveTokens(access, refresh)
+        api.me().requireData().also { session.saveUser(it) }
+    }
+
+    suspend fun changePassword(oldPassword: String, newPassword: String): Result<Unit> = apiCall {
+        api.updatePassword(UpdatePasswordBody(oldPassword, newPassword)).ensureOk()
+    }
+
+    /** [jpeg] is the square picture the screen already cut out. */
+    suspend fun uploadAvatar(jpeg: ByteArray): Result<UserDto> = apiCall {
+        val part = MultipartBody.Part.createFormData("file", "avatar.jpg", jpeg.toRequestBody("image/jpeg".toMediaType()))
+        api.avatar(part).requireData().also { session.saveUser(it) }
     }
 
     fun cachedUser(): UserDto? = session.cachedUser()

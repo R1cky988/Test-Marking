@@ -3,6 +3,7 @@
     <string name="tab_posts">Bài đăng</string>
     <string name="tab_exams">Kỳ thi</string>
     <string name="tab_members">Thành viên</string>
+    <string name="tab_members_pending">Thành viên (%1$d chờ duyệt)</string>
     <string name="tab_info">Thông tin</string>
 
     <string name="time_just_now">Vừa xong</string>

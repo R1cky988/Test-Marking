@@ -140,41 +140,14 @@
             android:textSize="13sp"
             android:textStyle="bold" />
 
-        <ScrollView
+        <!-- The question and its options, with LaTeX (KaTeX from assets/latex). The page scrolls by itself. -->
+        <WebView
+            android:id="@+id/webQuestion"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/tvQuestion"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:lineSpacingExtra="3dp"
-                    android:textColor="@color/text_primary"
-                    android:textSize="17sp" />
-
-                <TextView
-                    android:id="@+id/tvHint"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-                <LinearLayout
-                    android:id="@+id/optionsBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical" />
-            </LinearLayout>
-        </ScrollView>
+            android:layout_weight="1"
+            android:background="@color/background"
+            android:importantForAccessibility="yes" />
 
         <LinearLayout
             android:layout_width="match_parent"

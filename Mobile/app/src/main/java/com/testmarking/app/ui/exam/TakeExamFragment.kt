@@ -8,27 +8,30 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.CompoundButton
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.radiobutton.MaterialRadioButton
 import com.testmarking.app.R
 import com.testmarking.app.data.local.AttemptStatus
 import com.testmarking.app.databinding.FragmentTakeExamBinding
 import com.testmarking.app.util.TimeFormat
 import com.testmarking.app.util.applyStatusBarInset
 import com.testmarking.app.util.collectOnStarted
+import com.testmarking.app.util.isNightMode
 import com.testmarking.app.util.show
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Locale
 
 /** The student's side of an online exam. All the rules are in [TakeExamViewModel]; this screen only draws them. */
@@ -37,8 +40,10 @@ class TakeExamFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: TakeExamViewModel by viewModel { parametersOf(requireArguments().getString("examId").orEmpty()) }
 
-    /** the question the options were drawn for, so a tick does not redraw them */
+    /** the question the page was drawn for, so a tick (every second) does not redraw it */
     private var drawnKey: String? = null
+    private var pageReady = false
+    private var pendingPayload: String? = null
     private var ticks = 0
 
     private val backCallback = object : OnBackPressedCallback(false) {
@@ -62,8 +67,13 @@ class TakeExamFragment : Fragment() {
         binding.btnNext.setOnClickListener {
             val s = viewModel.state.value
             val a = s.attempt ?: return@setOnClickListener
-            if (s.allowReference) viewModel.goTo(a.currentIndex + 1) else viewModel.next()
+            when {
+                a.currentIndex >= s.questions.size - 1 -> confirmSubmit()      // the last question: this button hands the paper in
+                s.allowReference -> viewModel.goTo(a.currentIndex + 1)
+                else -> viewModel.next()
+            }
         }
+        setupWebView()
         binding.btnSubmit.setOnClickListener { confirmSubmit() }
         binding.btnMessage.setOnClickListener { viewModel.syncQuietly() }
 
@@ -86,6 +96,13 @@ class TakeExamFragment : Fragment() {
 
     override fun onDestroyView() {
         requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        _binding?.webQuestion?.let { web ->
+            web.removeJavascriptInterface("Android")
+            web.destroy()
+        }
+        drawnKey = null
+        pageReady = false
+        pendingPayload = null
         _binding = null
         super.onDestroyView()
     }
@@ -189,40 +206,89 @@ class TakeExamFragment : Fragment() {
         val qs = s.questions
         val q = qs.getOrNull(a.currentIndex) ?: return
         val multiple = q.type.equals("MULTIPLE", ignoreCase = true)
-        b.tvQuestionNo.text = getString(R.string.take_question_no, a.currentIndex + 1, qs.size)
-        b.tvQuestion.text = q.content.orEmpty()
-        b.tvHint.text = getString(if (multiple) R.string.take_hint_multiple else R.string.take_hint_single) +
+        b.tvQuestionNo.text = getString(R.string.take_question_no, a.currentIndex + 1, qs.size) +
+            (if (!s.allowReference && a.leftCount > 0) getString(R.string.take_left_count, a.leftCount) else "")
+        val hint = getString(if (multiple) R.string.take_hint_multiple else R.string.take_hint_single) +
             (if (!s.allowReference) "\n" + getString(R.string.take_hint_forward_only) else "")
 
-        val chosen = a.answers[q.order].orEmpty().split(",").filter { it.isNotBlank() }.toSet()
-        val key = "${q.order}|${chosen.sorted()}"
-        if (key != drawnKey) {
-            drawnKey = key
-            b.optionsBox.removeAllViews()
-            for (o in q.options.orEmpty()) {
-                val label = o.label.orEmpty()
-                val v: CompoundButton = if (multiple) MaterialCheckBox(requireContext()) else MaterialRadioButton(requireContext())
-                v.text = "$label. ${o.content.orEmpty()}"
-                v.textSize = 16f
-                v.isChecked = label in chosen
-                v.setPadding(8, 16, 8, 16)
-                v.setOnClickListener { viewModel.choose(q.order, label, multiple) }
-                b.optionsBox.addView(v, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }
+        val chosen = a.answers[q.order].orEmpty().split(",").filter { it.isNotBlank() }
+        // drawn again only for another question (the page keeps the ticks itself); the answers are saved by choose() below
+        if (drawnKey != "${q.order}") {
+            drawnKey = "${q.order}"
+            val payload = JSONObject()
+                .put("order", q.order).put("content", q.content.orEmpty()).put("multiple", multiple).put("hint", hint)
+                .put("dark", requireContext().isNightMode()).put("chosen", JSONArray(chosen))
+                .put("options", JSONArray(q.options.orEmpty().map { JSONObject().put("label", it.label.orEmpty()).put("content", it.content.orEmpty()) }))
+                .toString()
+            showQuestion(payload)
         }
 
         val last = a.currentIndex >= qs.size - 1
+        // On the last question the main button is "Nộp bài" (an open-book exam can also hand in from any question)
+        b.btnNext.setText(if (last) R.string.take_submit else R.string.take_next)
+        b.btnNext.isEnabled = true
         if (s.allowReference) {
             b.btnPrev.show(true)
             b.btnPrev.isEnabled = a.currentIndex > 0
-            b.btnNext.show(true)
-            b.btnNext.isEnabled = !last
-            b.btnSubmit.show(true)
+            b.btnSubmit.show(!last)
         } else {
             b.btnPrev.show(false)           // forward only
-            b.btnNext.show(!last)
-            b.btnSubmit.show(last)
+            b.btnSubmit.show(false)
         }
+    }
+
+    // ------------------------------------------------------------------ the question page (LaTeX)
+
+    private inner class Bridge {
+        /** called from the page when the student taps an option */
+        @JavascriptInterface
+        fun choose(label: String) {
+            val web = _binding?.webQuestion ?: return
+            web.post {
+                val s = viewModel.state.value
+                val a = s.attempt ?: return@post
+                val q = s.questions.getOrNull(a.currentIndex) ?: return@post
+                viewModel.choose(q.order, label, q.type.equals("MULTIPLE", ignoreCase = true))
+            }
+        }
+
+        @JavascriptInterface
+        fun ready() {
+            _binding?.webQuestion?.post {
+                pageReady = true
+                pendingPayload?.let { runScript(it) }
+                pendingPayload = null
+            }
+        }
+    }
+
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun setupWebView() {
+        val web = binding.webQuestion
+        pageReady = false
+        pendingPayload = null
+        web.settings.javaScriptEnabled = true
+        web.settings.allowFileAccess = false          // the page comes from file:///android_asset, which does not need it
+        web.settings.allowContentAccess = false
+        web.settings.setSupportZoom(false)
+        web.settings.blockNetworkLoads = true
+        web.isLongClickable = false
+        web.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        web.addJavascriptInterface(Bridge(), "Android")
+        web.webViewClient = object : WebViewClient() {
+            // nothing outside of the page may be opened
+            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest) = true
+        }
+        web.loadUrl("file:///android_asset/latex/question.html")
+    }
+
+    private fun showQuestion(payloadJson: String) {
+        val script = "renderQuestion($payloadJson)"
+        if (pageReady) runScript(script) else pendingPayload = script
+    }
+
+    private fun runScript(script: String) {
+        _binding?.webQuestion?.evaluateJavascript(script, null)
     }
 
     private fun renderDone(s: TakeState) {
@@ -231,9 +297,8 @@ class TakeExamFragment : Fragment() {
         val row = result?.detail?.result
         val syncedText = getString(R.string.take_done_synced, TimeFormat.dateTime(row?.syncedAt ?: TimeFormat.iso(a.syncedAtMs)))
         val body = when {
-            result?.pendingReview == true -> syncedText + "\n" + getString(R.string.take_done_pending_review)
             row == null -> syncedText + "\n" + getString(R.string.take_done_not_released)
-            row.isViolation == true -> syncedText + "\n" + getString(R.string.take_done_violation, row.violationReason.orEmpty())
+            row.isViolation == true -> syncedText + "\n" + getString(R.string.take_done_violation, row.violationReason?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "")
             else -> syncedText + "\n" + getString(
                 R.string.take_done_score, scoreText(row.totalScore), scoreText(result?.detail?.maxScore),
                 row.totalCorrect ?: 0, row.totalQuestions ?: 0,
