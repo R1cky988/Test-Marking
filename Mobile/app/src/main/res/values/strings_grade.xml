@@ -24,7 +24,6 @@
     <string name="grade_saved_no_image">Điểm đã lưu nhưng chưa gắn được ảnh phiếu.</string>
     <string name="grade_next">Chấm phiếu tiếp theo</string>
     <string name="grade_no_template">Kỳ thi này chưa gắn mẫu phiếu nên chưa chấm bằng camera được.</string>
-    <string name="grade_class_code">Mã lớp trên phiếu</string>
     <string name="grade_scan_searching">Chưa thấy phiếu</string>
     <string name="grade_scan_partial">Mới thấy %1$d/%2$d marker — chưa thể chụp</string>
     <string name="grade_scan_ready">Đủ %1$d/%2$d marker — chạm nút chụp</string>

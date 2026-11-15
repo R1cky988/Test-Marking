@@ -103,7 +103,7 @@ class GradeFragment : Fragment() {
         binding.btnNext.setOnClickListener { if (student) findNavController().popBackStack() else viewModel.next() }
         binding.btnSave.setOnClickListener {
             hideKeyboard()
-            viewModel.save(binding.etStudent.text?.toString().orEmpty(), binding.etVersion.text?.toString().orEmpty(), binding.etClass.text?.toString().orEmpty())
+            viewModel.save(binding.etStudent.text?.toString().orEmpty(), binding.etVersion.text?.toString().orEmpty())
         }
         binding.tilStudent.show(!student)
         binding.btnSave.setText(if (student) R.string.grade_mine_send else R.string.grade_save)
@@ -222,7 +222,6 @@ class GradeFragment : Fragment() {
         shownReview = r
         b.etStudent.setText(r.studentCode)
         b.etVersion.setText(r.testCode)
-        b.etClass.setText(r.classCode)
         r.image?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { b.ivSheet.setImageBitmap(it) } }
         val lines = ArrayList<String>()
         lines.add(getString(R.string.grade_summary_read, r.answers.size, r.total))

@@ -22,11 +22,13 @@ import java.io.ByteArrayOutputStream
 
 enum class GradePhase { PREPARING, CAMERA, READING, REVIEW, SAVING, SAVED }
 
-/** What the camera read, before it is saved. studentCode / testCode / classCode can still be corrected by hand. */
+/** HS + 8 digits: what the 8 digit columns of the sheet give. */
+private val STUDENT_CODE = Regex("^HS[0-9]{8}$")
+
+/** What the camera read, before it is saved. studentCode / testCode can still be corrected by hand. */
 data class Review(
     val studentCode: String,
     val testCode: String,
-    val classCode: String,
     val answers: Map<Int, String>,
     val total: Int,
     val blank: List<Int>,
@@ -96,7 +98,7 @@ class GradeViewModel(
             }
             val review = reviewOf(output, kit, original)
             _state.update { it.copy(phase = GradePhase.REVIEW, review = review) }
-            if (auto && idsComplete(review)) save(review.studentCode, review.testCode, review.classCode)
+            if (auto && idsComplete(review)) save(review.studentCode, review.testCode)
         }
     }
 
@@ -107,7 +109,6 @@ class GradeViewModel(
         return Review(
             studentCode = if (digits.isEmpty()) "" else "HS$digits",
             testCode = o.idResult.examCode.trim(),
-            classCode = o.idResult.classCode.trim(),
             answers = answers,
             total = total,
             blank = (1..total).filter { it !in answers },
@@ -121,16 +122,15 @@ class GradeViewModel(
     private fun idsComplete(r: Review) =
         r.studentCode.isNotEmpty() && !r.studentCode.contains('?') && r.testCode.isNotEmpty() && !r.testCode.contains('?')
 
-    fun save(studentCode: String, testCode: String, classCode: String) {
+    fun save(studentCode: String, testCode: String) {
         val s = _state.value
         val review = s.review ?: return
         if (s.phase == GradePhase.SAVING) return
         val code = studentCode.trim().uppercase()
         val version = testCode.trim()
-        val klass = classCode.trim().takeUnless { it.contains('?') }.orEmpty()
         when {
-            mode == GradeMode.TEACHER && (code.isEmpty() || code.contains('?')) ->
-                return fail("Mã học sinh chưa đọc được, hãy nhập lại (ví dụ HS00000001)")
+            mode == GradeMode.TEACHER && !STUDENT_CODE.matches(code) ->
+                return fail("Mã học sinh chưa đọc được, hãy nhập lại (HS + 8 chữ số, ví dụ HS00000001)")
             version.isEmpty() || version.contains('?') -> return fail("Mã đề chưa đọc được, hãy nhập lại (3 chữ số)")
         }
         _state.update { it.copy(phase = GradePhase.SAVING, error = null) }
@@ -138,14 +138,14 @@ class GradeViewModel(
             val image = review.image
             if (mode == GradeMode.STUDENT) {
                 // an unreadable student code is left to the server: it knows who is signed in
-                repo.submitMine(examId, if (code.contains('?')) "" else code, version, klass, review.answers)
+                repo.submitMine(examId, if (code.contains('?')) "" else code, version, review.answers)
                     .onSuccess {
                         val saved = image == null || repo.uploadImage(examId, null, image, mode).isSuccess
                         _state.update { it.copy(phase = GradePhase.SAVED, imageNotSaved = !saved, savedCount = it.savedCount + 1) }
                     }
                     .onFailure { e -> _state.update { it.copy(phase = GradePhase.REVIEW, error = toApiException(e).message) } }
             } else {
-                repo.record(examId, code, version, klass, review.answers)
+                repo.record(examId, code, version, review.answers)
                     .onSuccess { detail ->
                         val rid = detail.result?.id
                         var imageSaved = true

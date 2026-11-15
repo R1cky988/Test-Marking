@@ -279,23 +279,6 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilClass"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="@string/grade_class_code">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etClass"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionNext"
-                    android:inputType="textCapCharacters|textNoSuggestions"
-                    android:maxLength="20"
-                    android:maxLines="1" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilVersion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

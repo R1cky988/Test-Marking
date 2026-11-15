@@ -22,7 +22,6 @@ data class RecordResultBody(
     @SerializedName("student_code") val studentCode: String,
     @SerializedName("test_code") val testCode: String,
     val answers: List<AnswerDto>,
-    @SerializedName("class_code") val classCode: String? = null,
 )
 
 /** One question of a marked paper: what the student ticked and the right options. */

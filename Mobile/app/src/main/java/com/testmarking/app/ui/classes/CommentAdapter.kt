@@ -1,5 +1,6 @@
 package com.testmarking.app.ui.classes
 
+import com.testmarking.app.util.loadAvatar
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -48,6 +49,7 @@ class CommentAdapter(
 
         b.root.setPadding(ctx.dp(minOf(row.depth, 3) * 20), b.root.paddingTop, b.root.paddingRight, b.root.paddingBottom)
         b.tvAvatar.text = initialOf(c.author?.name)
+        b.ivAvatar.loadAvatar(c.author?.avatarUrl)
         b.tvAuthor.text = c.author?.name.orEmpty()
         b.tvContent.text = c.content.orEmpty()
         b.tvTime.text = TimeFormat.relative(ctx, c.createdAt)

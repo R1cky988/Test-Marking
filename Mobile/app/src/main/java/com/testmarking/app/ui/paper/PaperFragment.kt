@@ -46,11 +46,7 @@ class PaperFragment : Fragment() {
             val max = p.maxScore?.let { String.format(vi, "%.2f", it) } ?: "—"
             val lines = ArrayList<String>()
             lines.add(getString(R.string.paper_score, score, max, r?.totalCorrect ?: 0, r?.totalQuestions ?: p.answers.orEmpty().size))
-            val ids = listOfNotNull(
-                r?.testCode?.takeIf { it.isNotBlank() }?.let { getString(R.string.paper_test_code, it) },
-                r?.classCode?.takeIf { it.isNotBlank() }?.let { getString(R.string.paper_class_code, it) },
-            )
-            if (ids.isNotEmpty()) lines.add(ids.joinToString(" · "))
+            r?.testCode?.takeIf { it.isNotBlank() }?.let { lines.add(getString(R.string.paper_test_code, it)) }
             if (r?.isViolation == true) lines.add(getString(R.string.grade_saved_violation))
             b.tvSummary.text = lines.joinToString("\n")
             b.list.adapter = PaperAdapter(p.answers.orEmpty())

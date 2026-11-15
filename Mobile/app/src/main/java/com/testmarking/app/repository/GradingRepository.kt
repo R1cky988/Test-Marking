@@ -65,17 +65,17 @@ class GradingRepository(
         return GradingKit(examId, TemplateJson.toNative(template.anchorPoints, template.gridConfig), TemplateJson.questionCount(template.gridConfig))
     }
 
-    private fun body(studentCode: String, testCode: String, classCode: String, answers: Map<Int, String>) =
-        RecordResultBody(studentCode, testCode, answers.entries.sortedBy { it.key }.map { AnswerDto(it.key, it.value) }, classCode.ifBlank { null })
+    private fun body(studentCode: String, testCode: String, answers: Map<Int, String>) =
+        RecordResultBody(studentCode, testCode, answers.entries.sortedBy { it.key }.map { AnswerDto(it.key, it.value) })
 
     /** Teacher: the server marks the paper (right answers, score, violations); the answers are what the camera read. */
-    suspend fun record(examId: String, studentCode: String, testCode: String, classCode: String, answers: Map<Int, String>): Result<ResultDetailDto> = apiCall {
-        api.record(examId, body(studentCode, testCode, classCode, answers)).requireData()
+    suspend fun record(examId: String, studentCode: String, testCode: String, answers: Map<Int, String>): Result<ResultDetailDto> = apiCall {
+        api.record(examId, body(studentCode, testCode, answers)).requireData()
     }
 
     /** Student: his own sheet. Returns the id of the paper only for the teacher; the student's own copy is found by the server. */
-    suspend fun submitMine(examId: String, studentCode: String, testCode: String, classCode: String, answers: Map<Int, String>): Result<Unit> = apiCall {
-        api.submitSheet(examId, body(studentCode, testCode, classCode, answers)).requireData()
+    suspend fun submitMine(examId: String, studentCode: String, testCode: String, answers: Map<Int, String>): Result<Unit> = apiCall {
+        api.submitSheet(examId, body(studentCode, testCode, answers)).requireData()
         Unit
     }
 

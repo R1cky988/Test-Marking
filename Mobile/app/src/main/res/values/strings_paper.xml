@@ -5,7 +5,6 @@
     <string name="paper_blank">Bỏ trống</string>
     <string name="paper_score">%1$s / %2$s điểm · đúng %3$d/%4$d câu</string>
     <string name="paper_test_code">Mã đề %1$s</string>
-    <string name="paper_class_code">Mã lớp %1$s</string>
     <string name="paper_legend">Xanh lá: chọn đúng · Đỏ: chọn sai · Vàng: đáp án đúng bị bỏ sót</string>
     <string name="manage_line_correct">Đúng %1$d/%2$d câu</string>
     <string name="manage_tap_paper">Chạm để xem bài đã chấm</string>

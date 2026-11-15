@@ -1,5 +1,6 @@
 package com.testmarking.app.ui.classes
 
+import com.testmarking.app.util.loadAvatar
 import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -31,6 +32,7 @@ class PostAdapter(
         val ctx = b.root.context
 
         b.tvAvatar.text = initialOf(post.author?.name)
+        b.ivAvatar.loadAvatar(post.author?.avatarUrl)
         b.tvAuthor.text = post.author?.name.orEmpty()
         b.tvTime.text = TimeFormat.relative(ctx, post.publishedAt ?: post.createdAt)
 

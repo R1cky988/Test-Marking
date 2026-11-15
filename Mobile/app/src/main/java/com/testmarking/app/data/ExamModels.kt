@@ -80,7 +80,6 @@ data class ResultRowDto(
     @SerializedName("graded_at") val gradedAt: String? = null,
     @SerializedName("synced_at") val syncedAt: String? = null,
     @SerializedName("test_code") val testCode: String? = null,
-    @SerializedName("class_code") val classCode: String? = null,
 )
 
 data class ResultDetailDto(
@@ -114,5 +113,4 @@ data class ParticipantDto(
     @SerializedName("total_correct") val totalCorrect: Int? = null,
     @SerializedName("total_questions") val totalQuestions: Int? = null,
     @SerializedName("test_code") val testCode: String? = null,
-    @SerializedName("class_code") val classCode: String? = null,
 )
