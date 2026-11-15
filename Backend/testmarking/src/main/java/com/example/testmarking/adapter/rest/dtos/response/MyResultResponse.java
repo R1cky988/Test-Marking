@@ -8,11 +8,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record MyResultResponse(
         @JsonProperty("released") boolean released,
         @JsonProperty("submitted") boolean submitted,
-        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("detail") ExamResultDetailResponse detail,
-        /** the paper was reported for leaving the exam screen and the teacher has not decided yet: the score is held back */
-        @JsonProperty("pending_review") boolean pendingReview
+        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("detail") ExamResultDetailResponse detail
 ) {
-    public MyResultResponse(boolean released, boolean submitted, ExamResultDetailResponse detail) {
-        this(released, submitted, detail, false);
-    }
 }

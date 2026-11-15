@@ -8,7 +8,7 @@ import java.util.*;
  *
  *  - time per question (exam without open book): the working time is shared out by difficulty, easy : medium : hard = 1 : 2 : 3
  *  - the student's deadline: his start plus the working time, never later than the end of the exam
- *  - leaving the exam screen: ignored with open book; otherwise "FLAG" = he may go on but the paper is flagged as a violation
+ *  - leaving the exam screen: ignored with open book; otherwise "FLAG" = he may go on, "LOCK" = the exam is locked until the teacher unlocks it; either way the leave is a violation (0 points)
  *    (0 points, the teacher can undo it), "LOCK" = the exam is locked until the teacher unlocks it
  */
 final class OnlineExamRules {
@@ -88,11 +88,6 @@ final class OnlineExamRules {
     /** Leaving the screen locks the exam. */
     static boolean locksOnLeave(boolean allowReference, String policy) {
         return !allowReference && POLICY_LOCK.equals(normalizePolicy(policy));
-    }
-
-    /** The paper is flagged as a violation when it is marked. With LOCK the teacher already decided by unlocking. */
-    static boolean flagsViolation(boolean allowReference, String policy, int leftCount) {
-        return !allowReference && POLICY_FLAG.equals(normalizePolicy(policy)) && leftCount > 0;
     }
 
     static String leaveReason(int leftCount) {

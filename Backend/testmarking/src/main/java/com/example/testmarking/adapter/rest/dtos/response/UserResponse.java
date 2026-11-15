@@ -31,6 +31,9 @@ public class UserResponse {
 
     private Role role;
 
+    /** path of the profile picture, or null when the user has none (a new account has the placeholder "base_avatar" in the table) */
+    private String avatarUrl;
+
     private LocalDate createdAt;
 
     private LocalDate updatedAt;

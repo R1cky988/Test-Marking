@@ -3,7 +3,6 @@ package com.example.testmarking.application.imp;
 import com.example.testmarking.adapter.persistance.repository.*;
 import com.example.testmarking.adapter.rest.dtos.request.ResultAnswerRequest;
 import com.example.testmarking.adapter.rest.dtos.request.ResultRequest;
-import com.example.testmarking.adapter.rest.dtos.request.FlagDecisionRequest;
 import com.example.testmarking.adapter.rest.dtos.request.ViolationRequest;
 import com.example.testmarking.adapter.rest.dtos.response.*;
 import com.example.testmarking.domain.entities.*;
@@ -169,7 +168,6 @@ public class ExamResultImp {
         ExamResult r = results.findLatestOf(e.getId(), student.getId()).orElse(null);
         boolean submitted = r != null && !NO_SUBMISSION.equals(r.getProcessingStatus());
         if (!released || r == null) return new MyResultResponse(released, submitted, null);
-        if (pendingReview(r)) return new MyResultResponse(true, submitted, null, true);
         return new MyResultResponse(true, submitted, detail(e, r));
     }
 
@@ -290,28 +288,44 @@ public class ExamResultImp {
     }
 
     /**
-     * Marks the final answers of an ONLINE attempt (called by OnlineExamImp when the phone syncs). The paper keeps the time the
-     * student handed in by the phone's clock; flagged = he left the exam screen where the teacher chose "report only". The paper keeps its real score
-     * until the teacher decides (0 points, minus points or nothing); the student does not see it before that.
+     * Marks the paper an ONLINE student handed in (clientFinishedAt = when he handed in by the phone's clock). A violation that was
+     * already recorded for him (he left the exam screen) stays: the paper is marked, but it counts 0 points until the teacher clears it.
      */
-    @Transactional
-    public ExamResult gradeOnlineAttempt(Examination e, Student student, ResultRequest req, User by, OffsetDateTime clientFinishedAt,
-                                         boolean flagged, String reason) {
+    public ExamResult gradeOnlineAttempt(Examination e, Student student, ResultRequest req, User by, OffsetDateTime clientFinishedAt) {
         ExamResult r = score(e, student, req, SRC_ONLINE, by);
         r.setClientSubmittedAt(clientFinishedAt);
-        if (flagged && !Boolean.TRUE.equals(r.getFlagged())) {
-            r.setFlagged(true);          // only a report: the teacher decides what it costs (decideFlag)
-            r.setFlagReason(reason);
-            r.setFlagDecision(null);
-        }
         return results.save(r);
+    }
+
+    /**
+     * The student left the exam screen of an exam where that is not allowed: a violation (0 points) is recorded at once, so it shows
+     * in the teacher's violation list even while the exam is locked, and it stays when the teacher unlocks him. If he has no paper yet
+     * a paper is made only to carry the violation (it is filled in when he hands in). The teacher can clear it in the violation tab.
+     */
+    @Transactional
+    public void recordLeaveViolation(Examination e, Student student, User by, String reason) {
+        ExamResult r = results.findLatestOf(e.getId(), student.getId()).orElse(null);
+        if (r == null) {
+            r = new ExamResult();
+            r.setUuid(UUID.randomUUID());
+            r.setExamination(e);
+            r.setStudent(student);
+            r.setAttemptNumber(1);
+            r.setIsLatest(true);
+            r.setSubmittedBy(by);
+            r.setSubmissionSource(SRC_ONLINE);
+            r.setProcessingStatus(NO_SUBMISSION);
+        }
+        r.setViolation(true);
+        r.setViolationReason(reason);
+        r.setViolationAt(OffsetDateTime.now());
+        results.save(r);
     }
 
     /** What the student sees of his paper right after it was marked. */
     MyResultResponse myResultOf(Examination e, ExamResult r) {
         boolean released = ExamImp.released(e);
         boolean submitted = !NO_SUBMISSION.equals(r.getProcessingStatus());
-        if (released && pendingReview(r)) return new MyResultResponse(true, submitted, null, true);
         return new MyResultResponse(released, submitted, released ? detail(e, r) : null);
     }
 
@@ -385,50 +399,6 @@ public class ExamResultImp {
             r.setViolationAt(null);
             r = results.save(r);
         }
-        return participant(e, student, r, attemptOf(e, student));
-    }
-
-    /**
-     * The teacher decides a paper that was reported for leaving the exam screen: ZERO = a violation (0 points), DEDUCT = minus
-     * penalty_points from the real score, DISMISS = nothing. He may change his mind: every call starts from the real marks.
-     */
-    @Transactional
-    public ExamParticipantResponse decideFlag(User me, UUID examId, FlagDecisionRequest req) {
-        Examination e = exams.requireTeacher(me, examId);
-        if (req == null || req.studentId() == null || req.decision() == null) {
-            throw TemplateException.badRequest("Thiếu dữ liệu", "student_id, decision: are required");
-        }
-        Student student = findStudent(e, req.studentId(), null);
-        ExamResult r = results.findLatestOf(e.getId(), student.getId()).orElse(null);
-        if (r == null || !Boolean.TRUE.equals(r.getFlagged())) {
-            throw TemplateException.badRequestWithCode("NOT_FLAGGED", "Bài này không bị báo vi phạm");
-        }
-        String decision = req.decision().trim().toUpperCase(Locale.ROOT);
-        r.setViolation(false);
-        r.setViolationReason(null);
-        r.setViolationAt(null);
-        r.setPenaltyPoints(null);
-        switch (decision) {
-            case "ZERO" -> {
-                r.setViolation(true);
-                r.setViolationReason(r.getFlagReason());
-                r.setViolationAt(OffsetDateTime.now());
-            }
-            case "DEDUCT" -> {
-                BigDecimal p = req.penaltyPoints();
-                if (p == null || p.signum() <= 0) {
-                    throw TemplateException.badRequest("Dữ liệu không hợp lệ", "penalty_points: must be greater than 0");
-                }
-                if (e.getMaxScore() != null && p.compareTo(e.getMaxScore()) > 0) {
-                    throw TemplateException.badRequest("Dữ liệu không hợp lệ", "penalty_points: must not exceed the maximum score");
-                }
-                r.setPenaltyPoints(p.setScale(2, RoundingMode.HALF_UP));
-            }
-            case "DISMISS" -> { }
-            default -> throw TemplateException.badRequest("Dữ liệu không hợp lệ", "decision: ZERO, DEDUCT or DISMISS");
-        }
-        r.setFlagDecision(decision);
-        r = results.save(r);
         return participant(e, student, r, attemptOf(e, student));
     }
 
@@ -597,9 +567,7 @@ public class ExamResultImp {
                 r != null && Boolean.TRUE.equals(r.getViolation()), r == null ? null : r.getCreatedAt(),
                 online ? (a == null ? "NOT_STARTED" : a.getStatus()) : null,
                 online ? (a == null ? 0 : a.getLeftCount()) : null,
-                has ? r.getSyncedAt() : null, has ? r.getGradedAt() : null,
-                r != null && Boolean.TRUE.equals(r.getFlagged()), r == null ? null : r.getFlagReason(),
-                r == null ? null : r.getFlagDecision(), r == null ? null : r.getPenaltyPoints());
+                has ? r.getSyncedAt() : null, has ? r.getGradedAt() : null);
     }
 
     private ExamResultRowResponse row(ExamResult r) {
@@ -610,8 +578,7 @@ public class ExamResultImp {
                 v ? r.getViolationReason() : null,
                 firstNonBlank(r.getImageMarkedRustKey(), r.getImageDewarpedRustKey(), r.getImageRawRustKey()) != null,
                 r.getSubmissionSource(), v ? "VIOLATION" : r.getProcessingStatus(), r.getCreatedAt(),
-                r.getGradedAt(), r.getSyncedAt(), r.getClientSubmittedAt(),
-                Boolean.TRUE.equals(r.getFlagged()), r.getFlagReason(), r.getFlagDecision(), r.getPenaltyPoints());
+                r.getGradedAt(), r.getSyncedAt(), r.getClientSubmittedAt());
     }
 
     private ExamResultDetailResponse detail(Examination e, ExamResult r) {
@@ -645,18 +612,10 @@ public class ExamResultImp {
         return new ExamResultDetailResponse(row(r), e.getMaxScore(), out);
     }
 
-    /** Reported for leaving the exam screen and the teacher has not decided yet. */
-    static boolean pendingReview(ExamResult r) {
-        return Boolean.TRUE.equals(r.getFlagged()) && r.getFlagDecision() == null;
-    }
-
-    /** Points of a paper: 0 for a violation, the marks minus the teacher's penalty (never below 0), null while it is not marked. */
+    /** Points of a paper: 0 for a violation, null while it is not marked. */
     static BigDecimal score(ExamResult r) {
         if (Boolean.TRUE.equals(r.getViolation())) return BigDecimal.ZERO.setScale(2);
-        BigDecimal total = r.getTotalScore();
-        BigDecimal penalty = r.getPenaltyPoints();
-        if (total == null || penalty == null || penalty.signum() <= 0) return total;
-        return total.subtract(penalty).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        return r.getTotalScore();
     }
 
     static Integer correct(ExamResult r) {

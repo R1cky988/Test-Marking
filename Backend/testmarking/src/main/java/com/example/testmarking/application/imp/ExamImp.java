@@ -131,7 +131,16 @@ public class ExamImp {
      */
     public static boolean released(Examination e) {
         if (Boolean.TRUE.equals(e.getIsScorePublished())) return true;
-        return e.getFormat() == ExamFormat.ONLINE && !Boolean.FALSE.equals(e.getShowResultImmediately());
+        return e.getFormat() == ExamFormat.ONLINE && showsResultAtOnce(e);
+    }
+
+    /**
+     * ONLINE: show the result right after the exam? What the teacher chose; when he chose nothing, only an open-book exam does
+     * (a closed-book exam keeps its results hidden until the teacher publishes them).
+     */
+    static boolean showsResultAtOnce(Examination e) {
+        Boolean chosen = e.getShowResultImmediately();
+        return chosen != null ? chosen : Boolean.TRUE.equals(e.getAllowReference());
     }
 
     @Transactional
@@ -379,7 +388,7 @@ public class ExamImp {
         e.setTestLayout(layout);
         e.setQuestionBank(bank);
         // only ONLINE may show the result at once (default yes); OFFLINE and SUBMIT never do
-        e.setShowResultImmediately(format == ExamFormat.ONLINE && !Boolean.FALSE.equals(req.showResultImmediately()));
+        e.setShowResultImmediately(format == ExamFormat.ONLINE && (req.showResultImmediately() != null ? req.showResultImmediately() : Boolean.TRUE.equals(req.allowReference())));
         // open book is an ONLINE-only switch and is off unless the teacher turns it on
         e.setAllowReference(format == ExamFormat.ONLINE && Boolean.TRUE.equals(req.allowReference()));
         // what leaving the exam screen does only matters for ONLINE without open book
@@ -452,7 +461,7 @@ public class ExamImp {
         QuestionBank bank = e.getQuestionBank();
         int e1 = nz(e.getNumberOfEasyQuestions()), m = nz(e.getNumberOfMediumQuestions()), h = nz(e.getNumberOfHardQuestions());
         long versions = codes.countByExamination_Id(e.getId());
-        boolean immediate = e.getFormat() == ExamFormat.ONLINE && !Boolean.FALSE.equals(e.getShowResultImmediately());
+        boolean immediate = e.getFormat() == ExamFormat.ONLINE && showsResultAtOnce(e);
         return new ExamResponse(e.getUuid(), e.getExamName(), e.getSubjectName(),
                 cls == null ? null : cls.getUuid(), cls == null ? null : cls.getName(),
                 e.getFormat().name(), e.getStatus().name(), e.getFromTime(), e.getToTime(), e.getDurationMinutes(), e.getMaxScore(),

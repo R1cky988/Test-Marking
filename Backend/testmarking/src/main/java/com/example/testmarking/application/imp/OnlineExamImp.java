@@ -25,7 +25,7 @@ import java.util.*;
  *     The final sync is what marks the paper; synced_at / graded_at tell the teacher when that happened.
  *
  * Closed book (allow_reference = false): the questions only go forward, each with its own time. Leaving the exam screen is
- * counted; leave_policy FLAG only reports it (the teacher decides: 0 points, minus points or nothing), LOCK locks the exam until the teacher unlocks it.
+ * counted; leaving the screen is a violation (0 points); leave_policy FLAG lets the student go on, LOCK also locks the exam until the teacher unlocks it (the violation stays).
  * Open book: free time, free order, leaving is ignored.
  */
 @Service
@@ -205,6 +205,8 @@ public class OnlineExamImp {
         if (!allowReference && clientLeft > nz(a.getLeftCount())) {
             a.setLeftCount(clientLeft);
             a.setLastLeftAt(now);
+            // leaving is a violation (0 points) whatever the policy: it shows in the teacher's violation list at once and an unlock does not clear it
+            resultService.recordLeaveViolation(e, student, me, OnlineExamRules.leaveReason(clientLeft));
             if (OnlineExamRules.locksOnLeave(false, e.getLeavePolicy()) && ExamAttempt.IN_PROGRESS.equals(a.getStatus())) {
                 a.setStatus(ExamAttempt.LOCKED);
                 a.setLockedAt(now);
@@ -224,8 +226,7 @@ public class OnlineExamImp {
         List<ResultAnswerRequest> list = new ArrayList<>();
         for (Map.Entry<Integer, String> en : chosen.entrySet()) list.add(new ResultAnswerRequest(en.getKey(), en.getValue()));
         ResultRequest rr = new ResultRequest(null, null, a.getTestCode().getCodeNumber(), list);
-        boolean flagged = OnlineExamRules.flagsViolation(allowReference, e.getLeavePolicy(), nz(a.getLeftCount()));
-        ExamResult result = resultService.gradeOnlineAttempt(e, student, rr, me, clientAt, flagged, OnlineExamRules.leaveReason(nz(a.getLeftCount())));
+        ExamResult result = resultService.gradeOnlineAttempt(e, student, rr, me, clientAt);
 
         a.setStatus(ExamAttempt.SUBMITTED);
         a.setClientFinishedAt(clientAt);
@@ -238,7 +239,7 @@ public class OnlineExamImp {
 
     /**
      * The teacher lets a locked student go on. The time he was locked is added to his deadline, so the lock does not cost him
-     * working time. The leave stays on record (left_count) but is not a violation: unlocking is the teacher's decision.
+     * working time. The leave stays on record (left_count) and so does its violation.
      */
     @Transactional
     public ExamParticipantResponse unlock(User me, UUID examId, UUID studentId) {

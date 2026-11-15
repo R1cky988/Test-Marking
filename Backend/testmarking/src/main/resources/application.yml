@@ -18,6 +18,7 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        globally_quoted_identifiers: true
 
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
@@ -37,10 +38,10 @@ application:
     jwt:
       access-token:
         secret-key: ${JWT_SECRET}
-        expiration: 86400000          # 1 day in milliseconds
+        expiration: 86400000        # 1 day in milliseconds
       refresh-token:
         secret-key: ${JWT_REFRESH_SECRET}
-        expiration: 604800000       # 7 days
+        expiration: 604800000       # 7 days in milliseconds
 
 demo:
   enabled: ${DEMO_ENABLED:false}
@@ -54,6 +55,11 @@ storage:
     marked: marked-image
     avatar: avatar
     class-files: class-files
+
+logging:
+  level:
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: TRACE
+    org.springframework.web: DEBUG
 
 omr:
   template:

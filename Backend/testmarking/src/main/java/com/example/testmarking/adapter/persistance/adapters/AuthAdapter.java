@@ -244,9 +244,15 @@ public class AuthAdapter implements UserPort {
                 .dob(user.getDob())
                 .gender(user.getGender())
                 .role(user.getRole())
+                .avatarUrl(realAvatar(user.getAvatarUrl()))
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    /** "base_avatar" is the placeholder every new account gets; it is not a picture. */
+    private static String realAvatar(String value) {
+        return value == null || value.isBlank() || "base_avatar".equals(value) ? null : value;
     }
 
     public User getCurrentUser() {

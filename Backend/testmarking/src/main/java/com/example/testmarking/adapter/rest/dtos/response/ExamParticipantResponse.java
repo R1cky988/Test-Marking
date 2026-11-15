@@ -23,11 +23,6 @@ public record ExamParticipantResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("attempt_status") String attemptStatus,
         @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("left_count") Integer leftCount,
         @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("synced_at") OffsetDateTime syncedAt,
-        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("graded_at") OffsetDateTime gradedAt,
-        /** reported for leaving the exam screen; flag_decision null = the teacher has not decided yet */
-        @JsonProperty("is_flagged") boolean flagged,
-        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("flag_reason") String flagReason,
-        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("flag_decision") String flagDecision,
-        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("penalty_points") BigDecimal penaltyPoints
+        @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("graded_at") OffsetDateTime gradedAt
 ) {
 }
