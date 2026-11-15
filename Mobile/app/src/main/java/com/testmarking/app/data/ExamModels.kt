@@ -17,6 +17,7 @@ data class ExamDetailDto(
     @SerializedName("results_released") val resultsReleased: Boolean? = null,
     @SerializedName("template_id") val templateId: String? = null,
     @SerializedName("template_name") val templateName: String? = null,
+    @SerializedName("my_submitted") val mySubmitted: Boolean? = null,
 )
 
 data class PaperOptionDto(val label: String? = null, val content: String? = null)
@@ -78,6 +79,8 @@ data class ResultRowDto(
     @SerializedName("violation_reason") val violationReason: String? = null,
     @SerializedName("graded_at") val gradedAt: String? = null,
     @SerializedName("synced_at") val syncedAt: String? = null,
+    @SerializedName("test_code") val testCode: String? = null,
+    @SerializedName("class_code") val classCode: String? = null,
 )
 
 data class ResultDetailDto(
@@ -107,4 +110,9 @@ data class ParticipantDto(
     @SerializedName("left_count") val leftCount: Int? = null,
     @SerializedName("synced_at") val syncedAt: String? = null,
     @SerializedName("graded_at") val gradedAt: String? = null,
+    @SerializedName("result_id") val resultId: String? = null,
+    @SerializedName("total_correct") val totalCorrect: Int? = null,
+    @SerializedName("total_questions") val totalQuestions: Int? = null,
+    @SerializedName("test_code") val testCode: String? = null,
+    @SerializedName("class_code") val classCode: String? = null,
 )

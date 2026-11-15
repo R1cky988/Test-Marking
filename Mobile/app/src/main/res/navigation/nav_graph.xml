@@ -170,6 +170,25 @@
         <action
             android:id="@+id/action_exam_manage_to_grade"
             app:destination="@id/gradeFragment" />
+        <action
+            android:id="@+id/action_exam_manage_to_paper"
+            app:destination="@id/paperFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/paperFragment"
+        android:name="com.testmarking.app.ui.paper.PaperFragment"
+        android:label="Marked paper">
+        <argument
+            android:name="examId"
+            app:argType="string" />
+        <argument
+            android:name="resultId"
+            app:argType="string" />
+        <argument
+            android:name="title"
+            android:defaultValue=""
+            app:argType="string" />
     </fragment>
 
     <fragment
@@ -181,10 +200,16 @@
             app:argType="string" />
         <argument
             android:name="templateId"
+            android:defaultValue=""
             app:argType="string" />
         <argument
             android:name="examName"
             android:defaultValue=""
+            app:argType="string" />
+        <!-- "teacher" (default) or "student": a student hands in his own sheet -->
+        <argument
+            android:name="mode"
+            android:defaultValue="teacher"
             app:argType="string" />
     </fragment>
 </navigation>

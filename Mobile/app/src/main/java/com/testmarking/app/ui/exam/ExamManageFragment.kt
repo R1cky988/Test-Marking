@@ -34,7 +34,19 @@ class ExamManageFragment : Fragment() {
         binding.header.applyStatusBarInset()
         binding.tvTitle.text = requireArguments().getString("examName").takeUnless { it.isNullOrBlank() } ?: getString(R.string.manage_title)
         binding.btnBack.setOnClickListener { findNavController().popBackStack() }
-        adapter = ParticipantAdapter { viewModel.unlock(it.studentId.orEmpty()) }
+        adapter = ParticipantAdapter(
+            onUnlock = { viewModel.unlock(it.studentId.orEmpty()) },
+            onOpenPaper = { p ->
+                findNavController().navigate(
+                    R.id.action_exam_manage_to_paper,
+                    androidx.core.os.bundleOf(
+                        "examId" to requireArguments().getString("examId").orEmpty(),
+                        "resultId" to p.resultId.orEmpty(),
+                        "title" to p.fullName.orEmpty(),
+                    ),
+                )
+            },
+        )
         binding.list.layoutManager = LinearLayoutManager(requireContext())
         binding.list.adapter = adapter
 

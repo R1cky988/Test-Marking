@@ -3,8 +3,8 @@
     <string name="grade_open">Chấm bài bằng camera</string>
     <string name="grade_title">Chấm phiếu</string>
     <string name="grade_count">Đã chấm %1$d</string>
-    <string name="grade_preparing">Đang tải mẫu phiếu và đáp án…</string>
-    <string name="grade_hint">Đặt cả tờ phiếu trong khung, đủ sáng, thấy rõ 12 ô vuông đen ở mép giấy.</string>
+    <string name="grade_preparing">Đang tải mẫu phiếu…</string>
+    <string name="grade_hint">Đưa cả tờ phiếu vào khung, đủ sáng, thấy rõ 12 ô vuông đen ở mép giấy.</string>
     <string name="grade_capture">Chụp</string>
     <string name="grade_gallery">Chọn ảnh</string>
     <string name="grade_no_camera">Chưa có quyền dùng camera. Bạn vẫn có thể chọn ảnh phiếu từ thư viện.</string>
@@ -24,4 +24,20 @@
     <string name="grade_saved_no_image">Điểm đã lưu nhưng chưa gắn được ảnh phiếu.</string>
     <string name="grade_next">Chấm phiếu tiếp theo</string>
     <string name="grade_no_template">Kỳ thi này chưa gắn mẫu phiếu nên chưa chấm bằng camera được.</string>
+    <string name="grade_class_code">Mã lớp trên phiếu</string>
+    <string name="grade_scan_searching">Chưa thấy phiếu</string>
+    <string name="grade_scan_partial">Mới thấy %1$d/%2$d marker — chưa thể chụp</string>
+    <string name="grade_scan_ready">Đủ %1$d/%2$d marker — chạm nút chụp</string>
+    <string name="grade_scan_too_many">Thừa marker (%1$d/%2$d): trong khung có hơn một tờ phiếu</string>
+    <string name="grade_scan_duplicate">Có marker bị nhận trùng — giữ máy ổn định, không để phiếu khác vào khung</string>
+    <string name="grade_scan_unavailable">Chưa có OpenCV trong ứng dụng nên chưa kiểm tra được marker</string>
+    <string name="grade_not_ready">Chưa đủ 12 marker nên chưa chụp được</string>
+    <string name="grade_batch_left">Còn %1$d ảnh</string>
+    <string name="grade_batch_done">Đã xử lý %1$d ảnh: lưu %2$d, lỗi %3$d</string>
+    <string name="grade_skip">Bỏ qua ảnh này</string>
+    <string name="grade_mine_title">Đã gửi bài làm</string>
+    <string name="grade_mine_wait">Bài thi của bạn đang được xử lý, vui lòng đợi giáo viên công bố kết quả.</string>
+    <string name="grade_mine_back">Quay lại</string>
+    <string name="grade_mine_send">Gửi bài làm</string>
+    <string name="grade_mine_code">Mã số đọc được trên phiếu: %1$s</string>
 </resources>

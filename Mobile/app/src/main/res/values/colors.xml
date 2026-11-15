@@ -22,4 +22,16 @@
     <color name="success_fg">#004A27</color>
     <color name="warning_soft">#FBF1D8</color>
     <color name="warning_fg">#664610</color>
+
+    <!-- camera -->
+    <color name="ink">#0B1220</color>
+    <color name="scan_ok">#22C55E</color>
+    <color name="scan_wait">#F59E0B</color>
+    <color name="scan_bad">#EF4444</color>
+    <color name="scan_veil">#B3000000</color>
+    <!-- graded paper: right = green, wrong = red, the right option of a wrong answer = yellow -->
+    <color name="paper_right">#34C759</color>
+    <color name="paper_wrong">#FF5A4F</color>
+    <color name="paper_hint">#FFD60A</color>
+    <color name="paper_ink">#1B1F24</color>
 </resources>

@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -24,6 +25,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.testmarking.app.R
 import com.testmarking.app.databinding.FragmentGradeBinding
+import com.testmarking.app.omr.MarkerFrame
+import com.testmarking.app.omr.MarkerScanner
+import com.testmarking.app.repository.GradeMode
 import com.testmarking.app.util.applyStatusBarInset
 import com.testmarking.app.util.collectOnStarted
 import com.testmarking.app.util.hideKeyboard
@@ -33,16 +37,39 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
+import java.util.ArrayDeque
 import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.math.max
 
-/** Teacher: photograph (or pick) a paper sheet, check who it is, save. The server marks it. */
+/**
+ * Photograph (or pick) a paper sheet, check who it is, send. The server marks it.
+ * The camera looks for the 12 markers of the sheet all the time and only lets the picture be taken when all of them are seen.
+ * Teacher: any number of sheets, also many pictures from the gallery at once. Student: his own sheet.
+ */
 class GradeFragment : Fragment() {
     private var _binding: FragmentGradeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: GradeViewModel by viewModel {
-        parametersOf(requireArguments().getString("examId").orEmpty(), requireArguments().getString("templateId").orEmpty())
+        parametersOf(
+            requireArguments().getString("examId").orEmpty(), requireArguments().getString("templateId").orEmpty(),
+            if (requireArguments().getString("mode") == "student") GradeMode.STUDENT else GradeMode.TEACHER,
+        )
     }
+
+    private val student get() = viewModel.mode == GradeMode.STUDENT
+    private val scanner = MarkerScanner()
+    private var analysisExecutor: ExecutorService? = null
+    private var lastFrame: MarkerFrame? = null
+    private var lastFrameAt = 0L
+
+    // gallery batch
+    private val queue = ArrayDeque<Uri>()
+    private var batchActive = false
+    private var batchTotal = 0
+    private var batchSaved0 = 0
+    private var failuresSeen = 0
 
     private var imageCapture: ImageCapture? = null
     private var cameraBound = false
@@ -54,6 +81,7 @@ class GradeFragment : Fragment() {
         if (granted) startCamera() else showNoCamera()
     }
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri -> if (uri != null) readFromUri(uri) }
+    private val pickImages = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris -> startBatch(uris) }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentGradeBinding.inflate(inflater, container, false)
@@ -66,13 +94,21 @@ class GradeFragment : Fragment() {
         binding.btnBack.setOnClickListener { findNavController().popBackStack() }
         binding.btnRetryPrepare.setOnClickListener { viewModel.prepare() }
         binding.btnCapture.setOnClickListener { capture() }
-        binding.btnGallery.setOnClickListener { pickImage.launch("image/*") }
-        binding.btnRetake.setOnClickListener { viewModel.retake() }
-        binding.btnNext.setOnClickListener { viewModel.next() }
+        binding.btnGallery.setOnClickListener { if (student) pickImage.launch("image/*") else pickImages.launch("image/*") }
+        binding.btnRetake.setOnClickListener {
+            viewModel.retake()
+            // inside a batch the "retake" button skips the picture that needs a hand
+            if (batchActive) processNext()
+        }
+        binding.btnNext.setOnClickListener { if (student) findNavController().popBackStack() else viewModel.next() }
         binding.btnSave.setOnClickListener {
             hideKeyboard()
-            viewModel.save(binding.etStudent.text?.toString().orEmpty(), binding.etVersion.text?.toString().orEmpty())
+            viewModel.save(binding.etStudent.text?.toString().orEmpty(), binding.etVersion.text?.toString().orEmpty(), binding.etClass.text?.toString().orEmpty())
         }
+        binding.tilStudent.show(!student)
+        binding.btnSave.setText(if (student) R.string.grade_mine_send else R.string.grade_save)
+        binding.btnNext.setText(if (student) R.string.grade_mine_back else R.string.grade_next)
+        renderMarkers(null)
         collectOnStarted(viewModel.state) { render(it) }
     }
 
@@ -88,8 +124,9 @@ class GradeFragment : Fragment() {
         b.btnRetryPrepare.show(s.phase == GradePhase.PREPARING && s.error != null)
         // READING keeps the camera screen under the progress bar, so the photo that is being read does not flash away
         b.groupCamera.show(s.phase == GradePhase.CAMERA || s.phase == GradePhase.READING)
-        b.btnCapture.isEnabled = s.phase == GradePhase.CAMERA
-        b.btnGallery.isEnabled = s.phase == GradePhase.CAMERA
+        b.btnGallery.isEnabled = s.phase == GradePhase.CAMERA && !batchActive
+        refreshShutter()
+        b.btnRetake.setText(if (batchActive) R.string.grade_skip else R.string.grade_retake)
         b.groupReview.show(s.phase == GradePhase.REVIEW || s.phase == GradePhase.SAVING)
         b.btnSave.isEnabled = s.phase == GradePhase.REVIEW
         b.btnRetake.isEnabled = s.phase == GradePhase.REVIEW
@@ -99,6 +136,81 @@ class GradeFragment : Fragment() {
         if (s.phase == GradePhase.REVIEW || s.phase == GradePhase.SAVING) s.review?.let { showReview(it) }
         if (s.phase == GradePhase.SAVED) showSaved(s)
         if (s.phase == GradePhase.CAMERA) shownReview = null
+        followBatch(s)
+    }
+
+    // ------------------------------------------------------------------ batch from the gallery
+
+    private fun startBatch(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        if (uris.size == 1) return readFromUri(uris[0])
+        queue.clear()
+        queue.addAll(uris)
+        batchActive = true
+        batchTotal = uris.size
+        batchSaved0 = viewModel.state.value.savedCount
+        failuresSeen = viewModel.state.value.readFailures
+        processNext()
+    }
+
+    private fun processNext() {
+        val uri = queue.poll()
+        if (uri == null) {
+            if (batchActive) {
+                batchActive = false
+                val saved = viewModel.state.value.savedCount - batchSaved0
+                android.widget.Toast.makeText(requireContext(), getString(R.string.grade_batch_done, batchTotal, saved, batchTotal - saved), android.widget.Toast.LENGTH_LONG).show()
+            }
+            binding.tvQueue.text = ""
+            return
+        }
+        binding.tvQueue.text = getString(R.string.grade_batch_left, queue.size)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = withContext(Dispatchers.IO) { decode(uri) }
+            if (bitmap == null) { failuresSeen++; processNext() } else viewModel.read(bitmap, auto = true)
+        }
+    }
+
+    /** What to do after each picture of a batch: saved -> next; could not be read -> next; ids missing -> the teacher decides. */
+    private fun followBatch(s: GradeState) {
+        if (!batchActive) return
+        when {
+            s.phase == GradePhase.SAVED -> { viewModel.next(); processNext() }
+            s.phase == GradePhase.CAMERA && s.readFailures > failuresSeen -> { failuresSeen = s.readFailures; processNext() }
+        }
+    }
+
+    // ------------------------------------------------------------------ live markers
+
+    private fun onFrame(frame: MarkerFrame) {
+        lastFrame = frame
+        lastFrameAt = System.currentTimeMillis()
+        renderMarkers(frame)
+        refreshShutter()
+    }
+
+    private fun readyToShoot() = viewModel.state.value.phase == GradePhase.CAMERA && !batchActive &&
+        lastFrame?.complete == true && System.currentTimeMillis() - lastFrameAt <= FRAME_FRESH_MS
+
+    private fun refreshShutter() {
+        val b = _binding ?: return
+        val ok = readyToShoot()
+        b.btnCapture.isEnabled = ok
+        b.btnCapture.alpha = if (ok) 1f else 0.35f
+    }
+
+    private fun renderMarkers(f: MarkerFrame?) {
+        val b = _binding ?: return
+        val (text, color) = when {
+            f == null || (f.found == 0 && !f.unavailable) -> getString(R.string.grade_scan_searching) to R.color.scan_wait
+            f.unavailable -> getString(R.string.grade_scan_unavailable) to R.color.scan_bad
+            f.tooMany -> getString(R.string.grade_scan_too_many, f.found, f.expected) to R.color.scan_bad
+            f.duplicate -> getString(R.string.grade_scan_duplicate) to R.color.scan_bad
+            f.complete -> getString(R.string.grade_scan_ready, f.found, f.expected) to R.color.scan_ok
+            else -> getString(R.string.grade_scan_partial, f.found, f.expected) to R.color.scan_wait
+        }
+        b.tvMarkers.text = text
+        b.dot.background.mutate().setTint(ContextCompat.getColor(requireContext(), color))
     }
 
     // ------------------------------------------------------------------ review
@@ -110,11 +222,13 @@ class GradeFragment : Fragment() {
         shownReview = r
         b.etStudent.setText(r.studentCode)
         b.etVersion.setText(r.testCode)
+        b.etClass.setText(r.classCode)
         r.image?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { b.ivSheet.setImageBitmap(it) } }
         val lines = ArrayList<String>()
         lines.add(getString(R.string.grade_summary_read, r.answers.size, r.total))
         if (r.blank.isNotEmpty()) lines.add(getString(R.string.grade_summary_blank, r.blank.joinToString(", ")))
         if (r.doubtful.isNotEmpty()) lines.add(getString(R.string.grade_summary_doubtful, r.doubtful.joinToString(", ")))
+        if (student) lines.add(getString(R.string.grade_mine_code, r.studentCode.ifBlank { "—" }))
         b.tvSummary.text = lines.joinToString("\n")
         b.tvWarnings.show(r.warnings.isNotEmpty())
         b.tvWarnings.text = r.warnings.joinToString("\n")
@@ -123,6 +237,11 @@ class GradeFragment : Fragment() {
     private fun showSaved(s: GradeState) {
         val b = binding
         val result = s.saved?.result
+        if (student) {
+            b.tvSavedTitle.text = getString(R.string.grade_mine_title)
+            b.tvSavedBody.text = getString(R.string.grade_mine_wait) + if (s.imageNotSaved) "\n" + getString(R.string.grade_saved_no_image) else ""
+            return
+        }
         b.tvSavedTitle.text = getString(R.string.grade_saved_title, shownName())
         val score = result?.totalScore?.let { String.format(Locale("vi", "VN"), "%.2f", it).trimEnd('0').trimEnd(',') } ?: "—"
         val lines = ArrayList<String>()
@@ -158,8 +277,17 @@ class GradeFragment : Fragment() {
                 val provider = future.get()
                 val preview = Preview.Builder().build().also { it.setSurfaceProvider(view.preview.surfaceProvider) }
                 val capture = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build()
+                val executor = analysisExecutor ?: Executors.newSingleThreadExecutor().also { analysisExecutor = it }
+                val analysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+                analysis.setAnalyzer(executor) { image ->
+                    try {
+                        scanner.scan(image)?.let { f -> view.root.post { if (_binding != null) onFrame(f) } }
+                    } finally {
+                        image.close()
+                    }
+                }
                 provider.unbindAll()
-                provider.bindToLifecycle(viewLifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)
+                provider.bindToLifecycle(viewLifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis)
                 imageCapture = capture
                 cameraBound = true
                 view.tvNoCamera.show(false)
@@ -172,6 +300,10 @@ class GradeFragment : Fragment() {
 
     private fun capture() {
         val capture = imageCapture ?: return
+        if (!readyToShoot()) {
+            android.widget.Toast.makeText(requireContext(), R.string.grade_not_ready, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
         capture.takePicture(
             ContextCompat.getMainExecutor(requireContext()),
             object : ImageCapture.OnImageCapturedCallback() {
@@ -241,6 +373,11 @@ class GradeFragment : Fragment() {
     override fun onDestroyView() {
         cameraBound = false
         imageCapture = null
+        analysisExecutor?.shutdown()
+        analysisExecutor = null
+        lastFrame = null
+        batchActive = false
+        queue.clear()
         shownReview = null
         _binding = null
         super.onDestroyView()
@@ -248,5 +385,6 @@ class GradeFragment : Fragment() {
 
     private companion object {
         const val MAX_SIDE = 2800
+        const val FRAME_FRESH_MS = 900L
     }
 }

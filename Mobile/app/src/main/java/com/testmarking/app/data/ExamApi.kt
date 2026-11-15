@@ -49,11 +49,12 @@ interface ExamApi {
     @GET("templates/{id}")
     suspend fun template(@Path("id") id: String): ApiEnvelope<TemplateDto>
 
-    @GET("exams/{id}/versions")
-    suspend fun versions(@Path("id") id: String): ApiEnvelope<List<VersionSummaryDto>>
+    /** the sheet of an exam the student photographs himself: the template only */
+    @GET("exams/{id}/my-sheet/template")
+    suspend fun myTemplate(@Path("id") id: String): ApiEnvelope<TemplateDto>
 
-    @GET("exams/{id}/versions/{codeId}")
-    suspend fun version(@Path("id") id: String, @Path("codeId") codeId: String): ApiEnvelope<VersionDetailDto>
+    @GET("exams/{id}/results/{rid}")
+    suspend fun paper(@Path("id") id: String, @Path("rid") resultId: String): ApiEnvelope<PaperDetailDto>
 
     @POST("exams/{id}/results")
     suspend fun record(@Path("id") id: String, @Body body: RecordResultBody): ApiEnvelope<ResultDetailDto>
@@ -63,6 +64,17 @@ interface ExamApi {
     suspend fun uploadImage(
         @Path("id") id: String,
         @Path("rid") resultId: String,
+        @Part file: MultipartBody.Part,
+        @Query("kind") kind: String = "marked",
+    ): ApiEnvelope<Any>
+
+    @POST("exams/{id}/my-sheet")
+    suspend fun submitSheet(@Path("id") id: String, @Body body: RecordResultBody): ApiEnvelope<MyResultDto>
+
+    @Multipart
+    @POST("exams/{id}/my-sheet/image")
+    suspend fun uploadMySheet(
+        @Path("id") id: String,
         @Part file: MultipartBody.Part,
         @Query("kind") kind: String = "marked",
     ): ApiEnvelope<Any>

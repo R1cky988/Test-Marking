@@ -1,6 +1,7 @@
 package com.testmarking.app.ui.exam
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -14,6 +15,8 @@ import java.util.Locale
 
 class ParticipantAdapter(
     private val onUnlock: (ParticipantDto) -> Unit,
+    /** a student with a marked paper was tapped (OFFLINE / SUBMIT exams) */
+    private val onOpenPaper: (ParticipantDto) -> Unit = {},
 ) : ListAdapter<ParticipantDto, ParticipantAdapter.Holder>(Diff) {
 
     /** the student being unlocked right now (his button is off) */
@@ -38,6 +41,7 @@ class ParticipantAdapter(
                 p.isViolation == true -> R.string.manage_status_violation
                 p.attemptStatus == "LOCKED" -> R.string.manage_status_locked
                 p.attemptStatus == "IN_PROGRESS" -> R.string.manage_status_in_progress
+                p.hasResult == true && p.attemptStatus == null -> R.string.manage_status_graded
                 p.hasResult == true || p.attemptStatus == "SUBMITTED" -> R.string.manage_status_submitted
                 p.attemptStatus == "NOT_STARTED" -> R.string.manage_status_not_started
                 else -> R.string.manage_status_none
@@ -45,6 +49,9 @@ class ParticipantAdapter(
         )
         val lines = ArrayList<String>()
         p.studentCode?.takeIf { it.isNotBlank() }?.let { lines.add(ctx.getString(R.string.manage_line_code, it)) }
+        if (p.hasResult == true && p.totalCorrect != null) {
+            lines.add(ctx.getString(R.string.manage_line_correct, p.totalCorrect, p.totalQuestions ?: 0))
+        }
         if (p.hasResult == true) {
             lines.add(ctx.getString(R.string.manage_line_score, p.totalScore?.let { String.format(Locale("vi", "VN"), "%.2f", it) } ?: "—"))
         }
@@ -55,12 +62,17 @@ class ParticipantAdapter(
         if (p.gradedAt == null && p.syncedAt == null) {
             p.submittedAt?.let { lines.add(ctx.getString(R.string.manage_line_submitted, TimeFormat.dateTime(it))) }
         }
+        // a paper marked from a sheet can be opened (an ONLINE exam has no sheet: attemptStatus is set)
+        val openable = p.hasResult == true && p.attemptStatus == null && !p.resultId.isNullOrBlank()
+        if (openable) lines.add(ctx.getString(R.string.manage_tap_paper))
         b.tvDetail.text = lines.joinToString("\n")
         b.tvDetail.show(lines.isNotEmpty())
         val locked = p.attemptStatus == "LOCKED"
         b.btnUnlock.show(locked)
         b.btnUnlock.isEnabled = unlocking != p.studentId
         b.btnUnlock.setOnClickListener { onUnlock(p) }
+        b.root.isClickable = openable
+        b.root.setOnClickListener(if (openable) View.OnClickListener { onOpenPaper(p) } else null)
     }
 
     private object Diff : DiffUtil.ItemCallback<ParticipantDto>() {

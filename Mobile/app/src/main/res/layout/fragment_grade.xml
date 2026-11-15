@@ -92,12 +92,13 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- CAMERA -->
+    <!-- CAMERA: dark full-bleed viewfinder, status pill on top, shutter in the middle of the bottom bar -->
     <FrameLayout
         android:id="@+id/groupCamera"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="@color/ink"
         android:visibility="gone">
 
         <androidx.camera.view.PreviewView
@@ -106,45 +107,105 @@
             android:layout_height="match_parent"
             app:scaleType="fitCenter" />
 
-        <TextView
-            android:id="@+id/tvHint"
+        <View
+            android:id="@+id/scanFrame"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:background="#99000000"
-            android:padding="10dp"
-            android:text="@string/grade_hint"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp" />
+            android:layout_height="match_parent"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="76dp"
+            android:layout_marginEnd="24dp"
+            android:layout_marginBottom="132dp"
+            android:background="@drawable/bg_scan_frame" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:background="#99000000"
+            android:layout_gravity="top"
             android:gravity="center"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:padding="12dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnGallery"
-                style="@style/TM.Button.Outlined"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:id="@+id/pill"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
+                android:background="@drawable/bg_scan_pill"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="14dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp">
+
+                <View
+                    android:id="@+id/dot"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/bg_dot" />
+
+                <TextView
+                    android:id="@+id/tvMarkers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/grade_scan_searching"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="@string/grade_hint"
+                android:textColor="#E6FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@color/scan_veil"
+            android:paddingTop="14dp"
+            android:paddingBottom="18dp">
+
+            <TextView
+                android:id="@+id/btnGallery"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="20dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:drawableTop="@drawable/ic_attach"
+                android:drawableTint="#FFFFFF"
+                android:gravity="center"
                 android:text="@string/grade_gallery"
                 android:textColor="#FFFFFF"
-                app:strokeColor="#FFFFFF" />
+                android:textSize="11sp" />
 
-            <com.google.android.material.button.MaterialButton
+            <ImageButton
                 android:id="@+id/btnCapture"
-                style="@style/TM.Button.Primary"
-                android:layout_width="0dp"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_shutter"
+                android:contentDescription="@string/grade_capture"
+                android:enabled="false" />
+
+            <TextView
+                android:id="@+id/tvQueue"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/grade_capture" />
-        </LinearLayout>
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginEnd="20dp"
+                android:gravity="end"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/tvNoCamera"
@@ -214,6 +275,23 @@
                     android:layout_height="wrap_content"
                     android:imeOptions="actionNext"
                     android:inputType="textCapCharacters|textNoSuggestions"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilClass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/grade_class_code">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etClass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
+                    android:inputType="textCapCharacters|textNoSuggestions"
+                    android:maxLength="20"
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 

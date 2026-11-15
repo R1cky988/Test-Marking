@@ -7,11 +7,13 @@ import com.testmarking.app.data.ClassApi
 import com.testmarking.app.data.ExamApi
 import com.testmarking.app.data.local.AttemptStore
 import com.testmarking.app.repository.ExamsRepository
+import com.testmarking.app.repository.GradeMode
 import com.testmarking.app.repository.GradingRepository
 import com.testmarking.app.ui.exams.CreateExamViewModel
 import com.testmarking.app.ui.exams.ExamsViewModel
 import com.testmarking.app.repository.OnlineExamRepository
 import com.testmarking.app.ui.grade.GradeViewModel
+import com.testmarking.app.ui.paper.PaperViewModel
 import com.testmarking.app.ui.exam.ExamManageViewModel
 import com.testmarking.app.ui.exam.TakeExamViewModel
 import com.testmarking.app.data.RefreshApi
@@ -109,7 +111,8 @@ val appModule = module {
     viewModel { (classId: String) -> ClassDetailViewModel(classId, get()) }
     viewModel { (examId: String) -> TakeExamViewModel(examId, get()) }
     viewModel { (examId: String) -> ExamManageViewModel(examId, get()) }
-    viewModel { (examId: String, templateId: String) -> GradeViewModel(examId, templateId, get()) }
+    viewModel { (examId: String, resultId: String) -> PaperViewModel(examId, resultId, get()) }
+    viewModel { (examId: String, templateId: String, mode: GradeMode) -> GradeViewModel(examId, templateId, mode, get()) }
     viewModel { (scope: String) -> ExamsViewModel(scope, get()) }
     viewModel { CreateExamViewModel(get()) }
     viewModel { ProfileViewModel(get()) }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="paper_title">Bài đã chấm</string>
+    <string name="paper_question">Câu %1$d</string>
+    <string name="paper_blank">Bỏ trống</string>
+    <string name="paper_score">%1$s / %2$s điểm · đúng %3$d/%4$d câu</string>
+    <string name="paper_test_code">Mã đề %1$s</string>
+    <string name="paper_class_code">Mã lớp %1$s</string>
+    <string name="paper_legend">Xanh lá: chọn đúng · Đỏ: chọn sai · Vàng: đáp án đúng bị bỏ sót</string>
+    <string name="manage_line_correct">Đúng %1$d/%2$d câu</string>
+    <string name="manage_tap_paper">Chạm để xem bài đã chấm</string>
+    <string name="manage_status_graded">Đã chấm</string>
+    <string name="submit_title_mine">Chụp bài làm</string>
+    <string name="submit_sent">Đã gửi bài làm — bạn có thể chụp lại cho tới khi giáo viên công bố kết quả.</string>
+    <string name="submit_not_sent">Bạn chưa gửi bài làm.</string>
+    <string name="submit_closed">Kỳ thi không còn nhận bài (đã kết thúc hoặc chưa bắt đầu).</string>
+    <string name="submit_released">Giáo viên đã công bố kết quả.</string>
+    <string name="submit_action">Chụp bài làm</string>
+    <string name="submit_action_again">Chụp lại bài làm</string>
+</resources>

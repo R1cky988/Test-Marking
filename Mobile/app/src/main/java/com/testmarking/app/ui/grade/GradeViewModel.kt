@@ -5,6 +5,7 @@ import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.testmarking.app.data.ResultDetailDto
+import com.testmarking.app.repository.GradeMode
 import com.testmarking.app.network.toApiException
 import com.testmarking.app.omr.OmrEngine
 import com.testmarking.app.omr.model.OmrOutput
@@ -21,10 +22,11 @@ import java.io.ByteArrayOutputStream
 
 enum class GradePhase { PREPARING, CAMERA, READING, REVIEW, SAVING, SAVED }
 
-/** What the camera read, before the teacher saves it. studentCode / testCode can still be corrected by hand. */
+/** What the camera read, before it is saved. studentCode / testCode / classCode can still be corrected by hand. */
 data class Review(
     val studentCode: String,
     val testCode: String,
+    val classCode: String,
     val answers: Map<Int, String>,
     val total: Int,
     val blank: List<Int>,
@@ -43,12 +45,18 @@ data class GradeState(
     /** the photo was marked but the picture of the sheet could not be attached */
     val imageNotSaved: Boolean = false,
     val savedCount: Int = 0,
+    /** the picture that could not be read (kept so the screen can say which one of a batch failed) */
+    val readFailures: Int = 0,
 )
 
-/** Photograph -> read by the C++ reader -> the teacher checks the id and the version -> the server marks it. */
+/**
+ * Photograph -> read by the C++ reader -> the id and the version are checked -> sent; the server marks it.
+ * TEACHER: any student of the class. STUDENT: the sheet of the signed-in student, kept until the teacher publishes.
+ */
 class GradeViewModel(
     private val examId: String,
     private val templateId: String,
+    val mode: GradeMode,
     private val repo: GradingRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(GradeState())
@@ -61,13 +69,14 @@ class GradeViewModel(
     fun prepare() {
         _state.update { it.copy(phase = GradePhase.PREPARING, error = null) }
         viewModelScope.launch {
-            repo.kit(examId, templateId)
+            repo.kit(examId, templateId, mode)
                 .onSuccess { kit -> _state.update { it.copy(phase = GradePhase.CAMERA, kit = kit) } }
                 .onFailure { e -> _state.update { it.copy(phase = GradePhase.PREPARING, error = toApiException(e).message) } }
         }
     }
 
-    fun read(bitmap: Bitmap) {
+    /** [auto]: a batch from the gallery: a sheet whose ids were all read is sent without asking. */
+    fun read(bitmap: Bitmap, auto: Boolean = false) {
         val kit = _state.value.kit ?: return
         if (_state.value.phase != GradePhase.CAMERA) return
         _state.update { it.copy(phase = GradePhase.READING, error = null) }
@@ -82,10 +91,12 @@ class GradeViewModel(
             }
             val (output, original) = out
             if (!output.success) {
-                _state.update { it.copy(phase = GradePhase.CAMERA, error = explain(output)) }
+                _state.update { it.copy(phase = GradePhase.CAMERA, error = explain(output), readFailures = it.readFailures + 1) }
                 return@launch
             }
-            _state.update { it.copy(phase = GradePhase.REVIEW, review = reviewOf(output, kit, original)) }
+            val review = reviewOf(output, kit, original)
+            _state.update { it.copy(phase = GradePhase.REVIEW, review = review) }
+            if (auto && idsComplete(review)) save(review.studentCode, review.testCode, review.classCode)
         }
     }
 
@@ -96,6 +107,7 @@ class GradeViewModel(
         return Review(
             studentCode = if (digits.isEmpty()) "" else "HS$digits",
             testCode = o.idResult.examCode.trim(),
+            classCode = o.idResult.classCode.trim(),
             answers = answers,
             total = total,
             blank = (1..total).filter { it !in answers },
@@ -106,27 +118,42 @@ class GradeViewModel(
         )
     }
 
-    fun save(studentCode: String, testCode: String) {
+    private fun idsComplete(r: Review) =
+        r.studentCode.isNotEmpty() && !r.studentCode.contains('?') && r.testCode.isNotEmpty() && !r.testCode.contains('?')
+
+    fun save(studentCode: String, testCode: String, classCode: String) {
         val s = _state.value
-        val kit = s.kit ?: return
         val review = s.review ?: return
+        if (s.phase == GradePhase.SAVING) return
         val code = studentCode.trim().uppercase()
         val version = testCode.trim()
+        val klass = classCode.trim().takeUnless { it.contains('?') }.orEmpty()
         when {
-            code.isEmpty() || code.contains('?') -> return fail("Mã học sinh chưa đọc được, hãy nhập lại (ví dụ HS00000001)")
-            version !in kit.answerKey -> return fail("Mã đề “$version” không có trong kỳ thi này. Mã đề có: ${kit.answerKey.keys.sorted().joinToString(", ")}")
+            mode == GradeMode.TEACHER && (code.isEmpty() || code.contains('?')) ->
+                return fail("Mã học sinh chưa đọc được, hãy nhập lại (ví dụ HS00000001)")
+            version.isEmpty() || version.contains('?') -> return fail("Mã đề chưa đọc được, hãy nhập lại (3 chữ số)")
         }
         _state.update { it.copy(phase = GradePhase.SAVING, error = null) }
         viewModelScope.launch {
-            repo.record(examId, code, version, review.answers)
-                .onSuccess { detail ->
-                    val rid = detail.result?.id
-                    val image = review.image
-                    var imageSaved = true
-                    if (rid != null && image != null) imageSaved = repo.uploadImage(examId, rid, image).isSuccess
-                    _state.update { it.copy(phase = GradePhase.SAVED, saved = detail, imageNotSaved = !imageSaved, savedCount = it.savedCount + 1) }
-                }
-                .onFailure { e -> _state.update { it.copy(phase = GradePhase.REVIEW, error = toApiException(e).message) } }
+            val image = review.image
+            if (mode == GradeMode.STUDENT) {
+                // an unreadable student code is left to the server: it knows who is signed in
+                repo.submitMine(examId, if (code.contains('?')) "" else code, version, klass, review.answers)
+                    .onSuccess {
+                        val saved = image == null || repo.uploadImage(examId, null, image, mode).isSuccess
+                        _state.update { it.copy(phase = GradePhase.SAVED, imageNotSaved = !saved, savedCount = it.savedCount + 1) }
+                    }
+                    .onFailure { e -> _state.update { it.copy(phase = GradePhase.REVIEW, error = toApiException(e).message) } }
+            } else {
+                repo.record(examId, code, version, klass, review.answers)
+                    .onSuccess { detail ->
+                        val rid = detail.result?.id
+                        var imageSaved = true
+                        if (rid != null && image != null) imageSaved = repo.uploadImage(examId, rid, image, mode).isSuccess
+                        _state.update { it.copy(phase = GradePhase.SAVED, saved = detail, imageNotSaved = !imageSaved, savedCount = it.savedCount + 1) }
+                    }
+                    .onFailure { e -> _state.update { it.copy(phase = GradePhase.REVIEW, error = toApiException(e).message) } }
+            }
         }
     }
 

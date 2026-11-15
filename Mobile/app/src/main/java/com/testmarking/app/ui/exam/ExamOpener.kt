@@ -7,7 +7,13 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.testmarking.app.R
+import androidx.lifecycle.lifecycleScope
+import com.testmarking.app.data.ExamApi
 import com.testmarking.app.data.ExamItemDto
+import com.testmarking.app.network.apiCall
+import com.testmarking.app.network.requireData
+import kotlinx.coroutines.launch
+import org.koin.android.ext.android.get
 import com.testmarking.app.ui.classes.ClassLabels
 import com.testmarking.app.util.TimeFormat
 
@@ -25,7 +31,42 @@ object ExamOpener {
             teacher && exam.status != "DRAFT" -> nav.navigate(manageAction, bundleOf("examId" to id, "examName" to exam.name.orEmpty()))
             !teacher && exam.format.equals("ONLINE", ignoreCase = true) && exam.status != "CANCELLED" && exam.status != "DRAFT" ->
                 nav.navigate(takeAction, bundleOf("examId" to id))
+            !teacher && exam.format.equals("SUBMIT", ignoreCase = true) && exam.status != "CANCELLED" && exam.status != "DRAFT" ->
+                openSubmit(fragment, exam, id)
             else -> showInfo(fragment.requireContext(), exam)
+        }
+    }
+
+    /**
+     * Student, SUBMIT exam: the exam with what he can do now. He may photograph his sheet only while the exam is running and the
+     * teacher has not published the results; the state comes from the server (my_submitted, results_released).
+     */
+    private fun openSubmit(fragment: Fragment, exam: ExamItemDto, id: String) {
+        val ctx = fragment.requireContext()
+        fragment.viewLifecycleOwner.lifecycleScope.launch {
+            val api: ExamApi = fragment.get()
+            val detail = apiCall { api.detail(id).requireData() }.getOrNull()
+            val released = detail?.resultsReleased == true || exam.isScorePublished == true
+            val sent = detail?.mySubmitted == true
+            val open = (detail?.status ?: exam.status) == "ONGOING" && !released
+            val lines = ArrayList<String>()
+            exam.subject?.takeIf { it.isNotBlank() }?.let { lines.add(it) }
+            lines.add(ClassLabels.examStatus(ctx, detail?.status ?: exam.status))
+            lines.add(ctx.getString(R.string.exams_from, TimeFormat.dateTime(exam.fromTime)))
+            lines.add(ctx.getString(R.string.exams_to, TimeFormat.dateTime(exam.toTime)))
+            lines.add(ctx.getString(if (sent) R.string.submit_sent else R.string.submit_not_sent))
+            if (released) lines.add(ctx.getString(R.string.submit_released)) else if (!open) lines.add(ctx.getString(R.string.submit_closed))
+            val dialog = MaterialAlertDialogBuilder(ctx).setTitle(exam.name.orEmpty()).setMessage(lines.joinToString("\n"))
+                .setNegativeButton(R.string.common_back, null)
+            if (open) {
+                dialog.setPositiveButton(if (sent) R.string.submit_action_again else R.string.submit_action) { _, _ ->
+                    fragment.findNavController().navigate(
+                        R.id.gradeFragment,
+                        bundleOf("examId" to id, "examName" to exam.name.orEmpty(), "mode" to "student"),
+                    )
+                }
+            }
+            dialog.show()
         }
     }
 
