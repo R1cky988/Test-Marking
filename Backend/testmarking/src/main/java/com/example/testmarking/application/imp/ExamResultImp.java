@@ -169,7 +169,7 @@ public class ExamResultImp {
         ExamResult r = results.findLatestOf(e.getId(), student.getId()).orElse(null);
         boolean submitted = r != null && !NO_SUBMISSION.equals(r.getProcessingStatus());
         if (!released || r == null) return new MyResultResponse(released, submitted, null);
-        return new MyResultResponse(true, submitted, detail(e, r));
+        return new MyResultResponse(true, submitted, forStudent(detail(e, r)));
     }
 
     // ─── publish ─────────────────────────────────────────────────
@@ -378,7 +378,7 @@ public class ExamResultImp {
     MyResultResponse myResultOf(Examination e, ExamResult r) {
         boolean released = ExamImp.released(e);
         boolean submitted = !NO_SUBMISSION.equals(r.getProcessingStatus());
-        return new MyResultResponse(released, submitted, released ? detail(e, r) : null);
+        return new MyResultResponse(released, submitted, released ? forStudent(detail(e, r)) : null);
     }
 
     private TestCode pickCode(Examination e, String number) {
@@ -539,12 +539,8 @@ public class ExamResultImp {
         if (ExamImp.isCreator(me, e)) {
             r = requireResult(e, resultId);
         } else {
-            exams.requireStudentAccess(me, e);
-            if (!ExamImp.released(e)) throw notReleased();
-            r = requireResult(e, resultId);
-            if (r.getStudent() == null || r.getStudent().getUser() == null || !Objects.equals(r.getStudent().getUser().getId(), me.getId())) {
-                throw TemplateException.forbidden("Đây không phải bài làm của bạn");
-            }
+            // the marked picture shows the right answers: only the teacher of the exam may look at the papers
+            throw TemplateException.forbidden("Chỉ giáo viên của kỳ thi mới xem được ảnh bài làm");
         }
         String key;
         if (kind == null || kind.isBlank()) {
@@ -637,6 +633,14 @@ public class ExamResultImp {
                 firstNonBlank(r.getImageMarkedRustKey(), r.getImageDewarpedRustKey(), r.getImageRawRustKey()) != null,
                 r.getSubmissionSource(), v ? "VIOLATION" : r.getProcessingStatus(), r.getCreatedAt(),
                 r.getGradedAt(), r.getSyncedAt(), r.getClientSubmittedAt());
+    }
+
+    /**
+     * A student gets the summary of his paper (score, number right, version, time, violation) and never the questions, the
+     * right answers or his choices question by question, so the question bank cannot be copied out through this API.
+     */
+    private static ExamResultDetailResponse forStudent(ExamResultDetailResponse d) {
+        return new ExamResultDetailResponse(d.result(), d.maxScore(), List.of());
     }
 
     private ExamResultDetailResponse detail(Examination e, ExamResult r) {

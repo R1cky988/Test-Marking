@@ -19,6 +19,10 @@ public interface TestLayoutRepository extends JpaRepository<TestLayout, Long> {
     List<TestLayout> findByCreatedUserAndStatusOrderByCreatedAtDesc(User createdUser, String status);
 
     /** How many exams use this layout. A layout used by an exam cannot be edited or deleted. */
+    /** The highest layout_id this teacher has used: 0 when he has no sheet yet. */
+    @Query("select coalesce(max(l.layoutId), 0) from TestLayout l where l.createdUser = :user")
+    int maxLayoutId(@Param("user") User user);
+
     @Query("select count(e) from Examination e where e.testLayout.id = :layoutId")
     long countExamsUsing(@Param("layoutId") Long layoutId);
 }

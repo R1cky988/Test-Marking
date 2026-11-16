@@ -89,6 +89,7 @@ public class TestLayoutImp {
 
         TestLayout layout = TestLayout.builder()
                 .createdUser(teacher)
+                .layoutId(repository.maxLayoutId(teacher) + 1)
                 .name(name)
                 .version("1.0.0")
                 .templateType(type != null ? type : defaultType)

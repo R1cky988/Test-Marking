@@ -15,7 +15,8 @@ import java.util.UUID;
 @Table(name = "test_layouts", indexes = {
         @Index(name = "idx_test_layout_status", columnList = "status"),
         @Index(name = "idx_test_layout_is_active", columnList = "is_active"),
-        @Index(name = "idx_test_layout_creator_status", columnList = "created_user_id, status, created_at")
+        @Index(name = "idx_test_layout_creator_status", columnList = "created_user_id, status, created_at"),
+        @Index(name = "uk_test_layout_creator_layout_id", columnList = "created_user_id, layout_id", unique = true)
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TestLayout {
@@ -33,6 +34,13 @@ public class TestLayout {
     @JoinColumn(name = "created_user_id", nullable = false)
     private User createdUser;
 
+    /**
+     * The creator's own running number of the sheet: 1 for the first sheet he creates, 2 for the next, and so on.
+     * It is what is printed as "Mã phiếu", so the printed code stays short whatever the table id is.
+     */
+    @JsonProperty("layout_id")
+    @Column(name = "layout_id")
+    private Integer layoutId;
     @Column(nullable = false, length = 200)
     private String name;
 
@@ -89,7 +97,7 @@ public class TestLayout {
     @Column(name = "choices_per_question", nullable = false)
     private Integer choicesPerQuestion;
 
-    // So an old scanner can refuse a layout it can't read
+    // So an old scanner can refuse a layout it can't read 
     @JsonProperty("compatibility_hash")
     @Column(name = "compatibility_hash", length = 64)
     private String compatibilityHash;
@@ -128,10 +136,10 @@ public class TestLayout {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    /** "Mã phiếu" printed on the sheet: the template id, at least two digits (1 -> 01). Not stored. */
+    /** "Mã phiếu" printed on the sheet: the creator's layout_id, at least two digits (1 -> 01). Sheets without one keep the table id. Not stored. */
     @JsonProperty("sheet_code")
     @Transient
     public String getSheetCode() {
-        return com.example.testmarking.template.SheetCode.of(id);
+        return com.example.testmarking.template.SheetCode.of(layoutId != null ? Long.valueOf(layoutId) : id);
     }
 }
