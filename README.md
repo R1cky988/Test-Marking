@@ -12,8 +12,6 @@ Dự án gồm ba thành phần chính:
 - **Frontend:** Giao diện web phục vụ việc quản lý lớp học, ngân hàng câu hỏi, mẫu phiếu, kỳ thi và kết quả.
 - **Android:** Ứng dụng di động phục vụ chấm phiếu bằng camera (OMR), học sinh nộp phiếu giấy, làm bài thi trực tuyến và tương tác trong lớp học.
 
-Tài liệu chi tiết về luồng nghiệp vụ: xem [`PROJECT_LOGIC.md`](PROJECT_LOGIC.md).
-
 ## 2. Công nghệ sử dụng
 
 | Thành phần | Công nghệ |
