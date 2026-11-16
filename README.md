@@ -204,8 +204,6 @@ Backend cần được cấu hình kết nối đến PostgreSQL tại `localhos
 
 **Khởi tạo cấu trúc cơ sở dữ liệu:** Với cấu hình Hibernate `ddl-auto: update`, hệ thống có thể tự động tạo các bảng tương ứng với JPA Entity và **thêm** cột/bảng mới khi ứng dụng khởi chạy. Database PostgreSQL phải tồn tại trước khi backend kết nối; các bảng của hệ thống không cần tạo thủ công trong trường hợp cấu hình này hoạt động đúng.
 
-**Lưu ý khi nâng cấp từ dữ liệu cũ:** `ddl-auto: update` không điền dữ liệu cho các cột mới và không đổi dữ liệu có sẵn. Một số thay đổi cần chạy thêm câu lệnh SQL đi kèm, ví dụ: cột `layout_id` của mẫu phiếu (mã phiếu riêng của từng người tạo) và định dạng mã học sinh `HS` + 8 chữ số. Hãy chạy các lệnh SQL được ghi trong `CHANGES.md` của từng bản cập nhật. Với cơ sở dữ liệu mới hoàn toàn thì không cần.
-
 **Lưu ý về biến môi trường:** File `.env` được Docker Compose sử dụng để cấu hình các container. Khi chạy Spring Boot trực tiếp từ IntelliJ IDEA, cần bảo đảm các biến môi trường mà backend yêu cầu cũng được cung cấp cho tiến trình Java, trừ khi dự án đã có cơ chế đọc file `.env` riêng.
 
 **Lưu ý về CORS:** Backend hiện cho phép nguồn `http://localhost:5173` (Vite). Khi triển khai ở địa chỉ khác, cần thêm địa chỉ đó vào cấu hình CORS.
