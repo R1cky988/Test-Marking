@@ -1,7 +1,5 @@
 package com.testmarking.app.ui.profile
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -9,9 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.testmarking.app.R
 import com.testmarking.app.databinding.FragmentEditProfileBinding
@@ -21,12 +17,7 @@ import com.testmarking.app.util.collectOnStarted
 import com.testmarking.app.util.hideKeyboard
 import com.testmarking.app.util.loadAvatar
 import com.testmarking.app.util.show
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import java.io.ByteArrayOutputStream
-import kotlin.math.min
 
 /** Change the name and phone, the password and the picture of the logged in user. */
 class EditProfileFragment : Fragment() {
@@ -51,6 +42,11 @@ class EditProfileFragment : Fragment() {
         binding.btnAvatar.setOnClickListener { pickImage.launch("image/*") }
         binding.btnSaveInfo.setOnClickListener { saveInfo() }
         binding.btnChangePassword.setOnClickListener { changePassword() }
+
+        childFragmentManager.setFragmentResultListener(AvatarCropFragment.RESULT_KEY, viewLifecycleOwner) { _, result ->
+            val jpeg = result.getByteArray(AvatarCropFragment.JPEG)
+            if (jpeg == null) viewModel.avatarFailed(getString(R.string.edit_avatar_failed)) else viewModel.uploadAvatar(jpeg)
+        }
 
         collectOnStarted(viewModel.state) { render(it) }
         collectOnStarted(viewModel.events) { event ->
@@ -128,39 +124,9 @@ class EditProfileFragment : Fragment() {
 
     // ------------------------------------------------------------------ the picture
 
-    /** The middle square of the picked picture, 512 px at most, as a JPEG (the server wants a square and at most 2 MB). */
+    /** The picked picture goes to the crop screen; what comes back is the 512 px JPEG to upload. */
     private fun prepareAvatar(uri: Uri) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val jpeg = withContext(Dispatchers.IO) { runCatching { squareJpeg(uri) }.getOrNull() }
-            if (jpeg == null) viewModel.avatarFailed(getString(R.string.edit_avatar_failed)) else viewModel.uploadAvatar(jpeg)
-        }
-    }
-
-    private fun squareJpeg(uri: Uri): ByteArray? {
-        val resolver = requireContext().contentResolver
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-        var sample = 1
-        while (min(bounds.outWidth, bounds.outHeight) / (sample * 2) >= SIZE) sample *= 2
-        val raw = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return null
-        val turn = resolver.openInputStream(uri)?.use {
-            when (ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270
-                else -> 0
-            }
-        } ?: 0
-        val upright = if (turn == 0) raw else Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, android.graphics.Matrix().apply { postRotate(turn.toFloat()) }, true)
-        val side = min(upright.width, upright.height)
-        val square = Bitmap.createBitmap(upright, (upright.width - side) / 2, (upright.height - side) / 2, side, side)
-        val out = if (side > SIZE) Bitmap.createScaledBitmap(square, SIZE, SIZE, true) else square
-        // transparent pixels (PNG) would turn black in a JPEG: put the picture on white
-        val flat = Bitmap.createBitmap(out.width, out.height, Bitmap.Config.ARGB_8888)
-        android.graphics.Canvas(flat).apply { drawColor(android.graphics.Color.WHITE); drawBitmap(out, 0f, 0f, null) }
-        val bytes = ByteArrayOutputStream().also { flat.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
-        return if (bytes.size > MAX_BYTES) null else bytes
+        AvatarCropFragment.newInstance(uri).show(childFragmentManager, "avatar_crop")
     }
 
     override fun onDestroyView() {
@@ -168,8 +134,4 @@ class EditProfileFragment : Fragment() {
         super.onDestroyView()
     }
 
-    private companion object {
-        const val SIZE = 512
-        const val MAX_BYTES = 2 * 1024 * 1024
-    }
 }

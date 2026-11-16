@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="avatar_crop_title">Cắt ảnh đại diện</string>
+    <string name="avatar_crop_hint">Kéo để di chuyển, dùng hai ngón tay để phóng to hoặc thu nhỏ.</string>
+    <string name="avatar_crop_use">Dùng ảnh này</string>
+</resources>
