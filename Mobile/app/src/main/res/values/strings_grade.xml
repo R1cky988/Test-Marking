@@ -15,8 +15,9 @@
     <string name="grade_test_code">Mã đề (3 chữ số)</string>
     <string name="grade_retake">Chụp lại</string>
     <string name="grade_save">Lưu điểm</string>
-    <string name="grade_summary_read">Đã đọc %1$d/%2$d câu.</string>
-    <string name="grade_summary_blank">Câu bỏ trống: %1$s.</string>
+    <string name="grade_summary_read">Nhận dạng được %1$d/%2$d câu.</string>
+    <string name="grade_summary_blank">Câu chưa nhận dạng được: %1$s.</string>
+    <string name="grade_summary_test_code">Mã đề trên phiếu: %1$s</string>
     <string name="grade_summary_doubtful">Câu tô nhiều ô, cần kiểm tra: %1$s.</string>
     <string name="grade_saved_title">Đã lưu bài của %1$s</string>
     <string name="grade_saved_body">Đúng %1$d/%2$d câu · %3$s điểm</string>
@@ -38,5 +39,5 @@
     <string name="grade_mine_wait">Bài thi của bạn đang được xử lý, vui lòng đợi giáo viên công bố kết quả.</string>
     <string name="grade_mine_back">Quay lại</string>
     <string name="grade_mine_send">Gửi bài làm</string>
-    <string name="grade_mine_code">Mã số đọc được trên phiếu: %1$s</string>
+    <string name="grade_mine_code">Mã học sinh trên phiếu: %1$s</string>
 </resources>

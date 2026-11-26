@@ -103,8 +103,9 @@ class GradeViewModel(
     }
 
     private fun reviewOf(o: OmrOutput, kit: GradingKit, original: ByteArray?): Review {
-        val answers = o.answers.filter { it.answer.isNotBlank() }.associate { it.questionNumber to it.answer }
         val total = if (kit.questionCount > 0) kit.questionCount else (o.answers.maxOfOrNull { it.questionNumber } ?: 0)
+        // more rows read than the exam has questions: only questions 1..N count, the rest is ignored (no error)
+        val answers = o.answers.filter { it.answer.isNotBlank() && it.questionNumber in 1..total }.associate { it.questionNumber to it.answer }
         val digits = o.idResult.studentId.trim()
         return Review(
             studentCode = if (digits.isEmpty()) "" else "HS$digits",
@@ -112,7 +113,7 @@ class GradeViewModel(
             answers = answers,
             total = total,
             blank = (1..total).filter { it !in answers },
-            doubtful = o.answers.filter { it.flag != 0 && it.answer.isNotBlank() }.map { it.questionNumber },
+            doubtful = o.answers.filter { it.flag != 0 && it.answer.isNotBlank() && it.questionNumber in 1..total }.map { it.questionNumber },
             warnings = o.warnings,
             // the straightened sheet when the reader sent one, otherwise the photo itself
             image = o.dewarpedImageBase64.takeIf { it.isNotBlank() }?.let { runCatching { Base64.decode(it, Base64.DEFAULT) }.getOrNull() } ?: original,
@@ -131,14 +132,16 @@ class GradeViewModel(
         when {
             mode == GradeMode.TEACHER && !STUDENT_CODE.matches(code) ->
                 return fail("Mã học sinh chưa đọc được, hãy nhập lại (HS + 8 chữ số, ví dụ HS00000001)")
+            mode == GradeMode.STUDENT && (code.isEmpty() || code.contains('?')) ->
+                return fail("Chưa đọc được mã số học sinh trên phiếu, hãy chụp lại hoặc nhập lại mã số của bạn")
             version.isEmpty() || version.contains('?') -> return fail("Mã đề chưa đọc được, hãy nhập lại (3 chữ số)")
         }
         _state.update { it.copy(phase = GradePhase.SAVING, error = null) }
         viewModelScope.launch {
             val image = review.image
             if (mode == GradeMode.STUDENT) {
-                // an unreadable student code is left to the server: it knows who is signed in
-                repo.submitMine(examId, if (code.contains('?')) "" else code, version, review.answers)
+                // the server checks that the code on the sheet is the code of the signed-in student
+                repo.submitMine(examId, code, version, review.answers)
                     .onSuccess {
                         val saved = image == null || repo.uploadImage(examId, null, image, mode).isSuccess
                         _state.update { it.copy(phase = GradePhase.SAVED, imageNotSaved = !saved, savedCount = it.savedCount + 1) }
@@ -176,8 +179,9 @@ class GradeViewModel(
         return when {
             o.errorCode == "MULTIPLE_SHEETS_DETECTED" -> "Trong ảnh có nhiều hơn một tờ phiếu, hãy chụp từng tờ."
             o.errorCode == "MARKER_NOT_FOUND" || message.contains("markers", ignoreCase = true) ->
-                "Không thấy đủ 12 ô vuông đen ở mép phiếu. Chụp lại: đủ sáng, thấy cả tờ phiếu, không bị cắt hoặc che mép. ($message)"
-            else -> "Không đọc được phiếu: $message"
+                "Không thấy đủ 12 ô vuông đen ở mép phiếu. Chụp lại: đủ sáng, thấy cả tờ phiếu, không bị cắt hoặc che mép."
+            o.errorCode == "ENGINE" -> message
+            else -> "Không đọc được phiếu. Hãy chụp lại: đủ sáng, thấy cả tờ phiếu và để phiếu phẳng."
         }
     }
 }

@@ -10,10 +10,14 @@
     <string name="manage_tap_paper">Chạm để xem bài đã chấm</string>
     <string name="manage_status_graded">Đã chấm</string>
     <string name="submit_title_mine">Chụp bài làm</string>
-    <string name="submit_sent">Đã gửi bài làm — bạn có thể chụp lại cho tới khi giáo viên công bố kết quả.</string>
+    <string name="submit_sent_retake">Bạn đã nộp bài, có thể chụp lại %1$d lần.</string>
+    <string name="submit_sent_done">Bạn đã nộp bài làm, hết lượt chụp lại, vui lòng đợi giáo viên công bố kết quả.</string>
     <string name="submit_not_sent">Bạn chưa gửi bài làm.</string>
     <string name="submit_closed">Kỳ thi không còn nhận bài (đã kết thúc hoặc chưa bắt đầu).</string>
     <string name="submit_released">Giáo viên đã công bố kết quả.</string>
     <string name="submit_action">Chụp bài làm</string>
     <string name="submit_action_again">Chụp lại bài làm</string>
+    <string name="paper_mode_answers">Đáp án</string>
+    <string name="paper_mode_picture">Ảnh</string>
+    <string name="paper_picture_loading">Đang tải ảnh bài làm…</string>
 </resources>

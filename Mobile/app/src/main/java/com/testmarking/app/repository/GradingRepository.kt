@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.testmarking.app.data.AnswerDto
 import com.testmarking.app.data.ExamApi
 import com.testmarking.app.data.RecordResultBody
+import com.testmarking.app.data.PaperAnswerDto
 import com.testmarking.app.data.PaperDetailDto
 import com.testmarking.app.data.ResultDetailDto
 import com.testmarking.app.data.TemplateDto
@@ -13,6 +14,9 @@ import com.testmarking.app.network.ApiException
 import com.testmarking.app.network.apiCall
 import com.testmarking.app.network.requireData
 import com.testmarking.app.omr.TemplateJson
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import com.testmarking.app.omr.PaperPainter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -62,7 +66,11 @@ class GradingRepository(
             api.template(tid).requireData()
         }
         if (template.gridConfig == null || template.gridConfig.isJsonNull) throw ApiException("Mẫu phiếu chưa có cấu hình ô tô")
-        return GradingKit(examId, TemplateJson.toNative(template.anchorPoints, template.gridConfig), TemplateJson.questionCount(template.gridConfig))
+        // the sheet may have more rows than the exam has questions: only questions 1..N of the exam count
+        val sheetRows = TemplateJson.questionCount(template.gridConfig)
+        val perVersion = runCatching { api.detail(examId).requireData().questionsPerVersion }.getOrNull() ?: 0
+        val questions = if (perVersion in 1 until sheetRows || (perVersion > 0 && sheetRows == 0)) perVersion else sheetRows
+        return GradingKit(examId, TemplateJson.toNative(template.anchorPoints, template.gridConfig), questions)
     }
 
     private fun body(studentCode: String, testCode: String, answers: Map<Int, String>) =
@@ -87,6 +95,21 @@ class GradingRepository(
     }
 
     suspend fun paper(examId: String, resultId: String): Result<PaperDetailDto> = apiCall { api.paper(examId, resultId).requireData() }
+
+    /**
+     * The straightened picture of a paper with the marking drawn on it. Fails with a plain message when the paper has no picture or
+     * only the raw photo (old papers), because circles on a photo that is not straightened would miss the bubbles.
+     */
+    suspend fun markedPicture(examId: String, resultId: String, answers: List<PaperAnswerDto>): Result<Bitmap> = apiCall {
+        val templateId = api.detail(examId).requireData().templateId?.takeIf { it.isNotBlank() } ?: throw ApiException("Kỳ thi này chưa gắn mẫu phiếu")
+        val template = api.template(templateId).requireData()
+        val bytes = withContext(Dispatchers.IO) { api.resultImage(examId, resultId).use { it.bytes() } }
+        withContext(Dispatchers.Default) {
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: throw ApiException("Không mở được ảnh bài làm")
+            PaperPainter.draw(bitmap, TemplateJson.gridObject(template.gridConfig), answers)
+                ?: throw ApiException("Bài này chưa có ảnh đã nắn nên chưa thể vẽ kết quả. Hãy chụp lại bài để có ảnh.")
+        }
+    }
 
     // ---- the copy on the phone ----
 

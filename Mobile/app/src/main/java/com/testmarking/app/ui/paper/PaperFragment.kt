@@ -34,6 +34,9 @@ class PaperFragment : Fragment() {
         binding.tvTitle.text = requireArguments().getString("title").takeUnless { it.isNullOrBlank() } ?: getString(R.string.paper_title)
         binding.btnBack.setOnClickListener { findNavController().popBackStack() }
         binding.list.layoutManager = LinearLayoutManager(requireContext())
+        binding.toggleMode.addOnButtonCheckedListener { _, id, checked ->
+            if (checked) viewModel.showPicture(id == R.id.btnModePicture)
+        }
         collectOnStarted(viewModel.state) { s ->
             val b = _binding ?: return@collectOnStarted
             b.progress.visibility = if (s.loading) View.VISIBLE else View.INVISIBLE
@@ -49,7 +52,23 @@ class PaperFragment : Fragment() {
             r?.testCode?.takeIf { it.isNotBlank() }?.let { lines.add(getString(R.string.paper_test_code, it)) }
             if (r?.isViolation == true) lines.add(getString(R.string.grade_saved_violation))
             b.tvSummary.text = lines.joinToString("\n")
-            b.list.adapter = PaperAdapter(p.answers.orEmpty())
+            if (b.list.adapter == null || b.list.tag !== p) {
+                b.list.adapter = PaperAdapter(p.answers.orEmpty())
+                b.list.tag = p
+            }
+            // Answers: the list. Picture: the straightened sheet with the rings drawn on it.
+            b.list.show(!s.showPicture)
+            b.tvLegend.show(!s.showPicture)
+            b.pictureBox.show(s.showPicture)
+            b.imgPaper.setImageBitmap(s.picture)
+            b.imgPaper.show(s.picture != null)
+            val note = when {
+                s.pictureLoading -> getString(R.string.paper_picture_loading)
+                else -> s.pictureError
+            }
+            b.tvPictureNote.text = note.orEmpty()
+            b.tvPictureNote.show(note != null)
+            if (s.pictureLoading) b.progress.visibility = View.VISIBLE
         }
     }
 

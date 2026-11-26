@@ -223,14 +223,14 @@ class GradeFragment : Fragment() {
         b.etStudent.setText(r.studentCode)
         b.etVersion.setText(r.testCode)
         r.image?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { b.ivSheet.setImageBitmap(it) } }
+        // only what a person needs: how many questions were read, which were not, the codes on the sheet; no technical messages
         val lines = ArrayList<String>()
         lines.add(getString(R.string.grade_summary_read, r.answers.size, r.total))
         if (r.blank.isNotEmpty()) lines.add(getString(R.string.grade_summary_blank, r.blank.joinToString(", ")))
-        if (r.doubtful.isNotEmpty()) lines.add(getString(R.string.grade_summary_doubtful, r.doubtful.joinToString(", ")))
-        if (student) lines.add(getString(R.string.grade_mine_code, r.studentCode.ifBlank { "—" }))
+        lines.add(getString(R.string.grade_mine_code, r.studentCode.ifBlank { "—" }))
+        lines.add(getString(R.string.grade_summary_test_code, r.testCode.ifBlank { "—" }))
         b.tvSummary.text = lines.joinToString("\n")
-        b.tvWarnings.show(r.warnings.isNotEmpty())
-        b.tvWarnings.text = r.warnings.joinToString("\n")
+        b.tvWarnings.show(false)
     }
 
     private fun showSaved(s: GradeState) {

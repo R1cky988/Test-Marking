@@ -19,7 +19,7 @@ object OmrEngine {
             bitmap, templateJson, null,
             options.densityThreshold, options.diffThreshold,
             false,                      // no scoring on the phone
-            false,                      // no debug picture
+            true,                       // the reader only hands back the straightened sheet (dewarped_image_base64) when this is on; without it the app would upload the raw photo
             options.useAdaptiveThreshold, options.adaptiveBlockSize, options.adaptiveC,
             options.preprocessMarkers, options.preprocessPostWarp, options.morphCleanup,
             options.autoAdaptive, options.requiredMarkers,

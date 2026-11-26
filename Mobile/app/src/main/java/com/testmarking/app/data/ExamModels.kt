@@ -18,6 +18,11 @@ data class ExamDetailDto(
     @SerializedName("template_id") val templateId: String? = null,
     @SerializedName("template_name") val templateName: String? = null,
     @SerializedName("my_submitted") val mySubmitted: Boolean? = null,
+    /** questions of one version of the exam (the sheet may have more rows) */
+    @SerializedName("questions_per_version") val questionsPerVersion: Int? = null,
+    /** SUBMIT, student: retakes left after the hand-in (all of them before he handed in anything) */
+    @SerializedName("retakes_left") val retakesLeft: Int? = null,
+    @SerializedName("max_retakes") val maxRetakes: Int? = null,
 )
 
 data class PaperOptionDto(val label: String? = null, val content: String? = null)

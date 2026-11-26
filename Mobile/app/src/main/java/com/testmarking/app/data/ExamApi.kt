@@ -1,6 +1,8 @@
 package com.testmarking.app.data
 
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
+import retrofit2.http.Streaming
 import retrofit2.http.Body
 import retrofit2.http.Multipart
 import retrofit2.http.Part
@@ -55,6 +57,11 @@ interface ExamApi {
 
     @GET("exams/{id}/results/{rid}")
     suspend fun paper(@Path("id") id: String, @Path("rid") resultId: String): ApiEnvelope<PaperDetailDto>
+
+    /** The picture of a paper (teacher): marked, then dewarped, then raw, whichever the paper has. */
+    @Streaming
+    @GET("exams/{id}/results/{rid}/image")
+    suspend fun resultImage(@Path("id") id: String, @Path("rid") resultId: String): ResponseBody
 
     @POST("exams/{id}/results")
     suspend fun record(@Path("id") id: String, @Body body: RecordResultBody): ApiEnvelope<ResultDetailDto>

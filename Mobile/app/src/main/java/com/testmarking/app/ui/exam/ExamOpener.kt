@@ -49,22 +49,37 @@ object ExamOpener {
             val released = detail?.resultsReleased == true || exam.isScorePublished == true
             val sent = detail?.mySubmitted == true
             val open = (detail?.status ?: exam.status) == "ONGOING" && !released
+            val goGrade = {
+                fragment.findNavController().navigate(
+                    R.id.gradeFragment,
+                    bundleOf("examId" to id, "examName" to exam.name.orEmpty(), "mode" to "student"),
+                )
+            }
+            // already handed in: say how many retakes are left; no more retakes -> wait for the teacher
+            if (sent && !released) {
+                val left = if (open) (detail?.retakesLeft ?: 0) else 0
+                val builder = MaterialAlertDialogBuilder(ctx).setTitle(exam.name.orEmpty())
+                if (left > 0) {
+                    builder.setMessage(ctx.getString(R.string.submit_sent_retake, left))
+                        .setPositiveButton(R.string.submit_action_again) { _, _ -> goGrade() }
+                        .setNegativeButton(R.string.common_back, null)
+                } else {
+                    builder.setMessage(R.string.submit_sent_done).setNegativeButton(R.string.common_back, null)
+                }
+                builder.show()
+                return@launch
+            }
             val lines = ArrayList<String>()
             exam.subject?.takeIf { it.isNotBlank() }?.let { lines.add(it) }
             lines.add(ClassLabels.examStatus(ctx, detail?.status ?: exam.status))
             lines.add(ctx.getString(R.string.exams_from, TimeFormat.dateTime(exam.fromTime)))
             lines.add(ctx.getString(R.string.exams_to, TimeFormat.dateTime(exam.toTime)))
-            lines.add(ctx.getString(if (sent) R.string.submit_sent else R.string.submit_not_sent))
+            lines.add(ctx.getString(R.string.submit_not_sent))
             if (released) lines.add(ctx.getString(R.string.submit_released)) else if (!open) lines.add(ctx.getString(R.string.submit_closed))
             val dialog = MaterialAlertDialogBuilder(ctx).setTitle(exam.name.orEmpty()).setMessage(lines.joinToString("\n"))
                 .setNegativeButton(R.string.common_back, null)
             if (open) {
-                dialog.setPositiveButton(if (sent) R.string.submit_action_again else R.string.submit_action) { _, _ ->
-                    fragment.findNavController().navigate(
-                        R.id.gradeFragment,
-                        bundleOf("examId" to id, "examName" to exam.name.orEmpty(), "mode" to "student"),
-                    )
-                }
+                dialog.setPositiveButton(R.string.submit_action) { _, _ -> goGrade() }
             }
             dialog.show()
         }

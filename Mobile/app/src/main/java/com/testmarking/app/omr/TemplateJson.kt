@@ -34,6 +34,9 @@ object TemplateJson {
         return total
     }
 
+    /** The grid_config of the server as a JSON object (it may come as text or as an object). */
+    fun gridObject(e: JsonElement?): JSONObject? = asObject(e)
+
     private fun asObject(e: JsonElement?): JSONObject? = when {
         e == null || e.isJsonNull -> null
         e.isJsonPrimitive -> runCatching { JSONObject(e.asString) }.getOrNull()
