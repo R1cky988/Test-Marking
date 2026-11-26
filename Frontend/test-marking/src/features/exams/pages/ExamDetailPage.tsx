@@ -84,6 +84,7 @@ export function ExamDetailPage() {
       [t("exam.field.duration", "Thời lượng (phút)"), e.duration_minutes ? String(e.duration_minutes) : "—"] as [string, string],
       [t("exam.field.result", "Kết quả"), resultText(e)] as [string, string],
       ...(e.format === "ONLINE" ? [[t("exam.field.allowReference", "Cho phép tra cứu tài liệu"), e.allow_reference ? t("common.yes", "Có") : t("common.no", "Không")] as [string, string]] : []),
+      ...(e.format === "SUBMIT" ? [[t("exam.field.maxRetakes", "Số lần học sinh được chụp lại"), String(e.max_retakes ?? 1)] as [string, string]] : []),
       ...(e.format === "ONLINE" && !e.allow_reference ? [[t("exam.field.leavePolicy", "Khi học sinh tự ý thoát màn hình làm bài"), e.leave_policy === "LOCK" ? t("exam.leave.lock", "Khóa bài thi") : t("exam.leave.flag", "Vẫn cho làm tiếp, ghi vi phạm")] as [string, string]] : []),
       [t("exam.step.template", "Mẫu phiếu"), e.template_name ? `${e.template_name} (${e.template_total_questions ?? 0} ${t("exam.questionsShort", "câu")})` : "—"] as [string, string],
       [t("exam.field.bank", "Ngân hàng câu hỏi"), e.question_bank_name ?? "—"] as [string, string],
@@ -151,7 +152,7 @@ export function ExamDetailPage() {
               <TabsContent value="versions"><VersionsPanel exam={e} /></TabsContent>
             </div>
           </Tabs>
-          <ResultDialog examId={e.id} resultId={openResult} open={openResult !== null} onOpenChange={(o) => { if (!o) setOpenResult(null); }} teacher format={e.format} />
+          <ResultDialog examId={e.id} resultId={openResult} open={openResult !== null} onOpenChange={(o) => { if (!o) setOpenResult(null); }} teacher format={e.format} templateId={e.template_id} />
           <RecordResultDialog examId={e.id} open={recording.open} studentId={recording.student} onOpenChange={(o) => setRecording((r) => ({ ...r, open: o }))} />
         </>
       )}

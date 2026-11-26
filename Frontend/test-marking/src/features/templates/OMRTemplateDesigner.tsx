@@ -41,8 +41,8 @@ interface OMRTemplateDesignerProps {
   onSave?: (draft: OMRTemplateDraft) => void | Promise<void>;
 }
 
-const PAGE_WIDTH = 827;
-const PAGE_HEIGHT = 1169;
+export const PAGE_WIDTH = 827;
+export const PAGE_HEIGHT = 1169;
 const GRID_PADDING = 5;
 const NUMBER_COLUMN_RATIO = 0.12;
 const NUMBER_COLUMN_MIN_WIDTH = 14;
@@ -90,7 +90,7 @@ function lockIdZoneItems(items: OmrIdZoneItem[]): OmrIdZoneItem[] {
   });
 }
 
-interface AnswerGridCell {
+export interface AnswerGridCell {
   type: "question_number" | "choice";
   questionNumber: number;
   choiceLetter?: string;
@@ -100,14 +100,14 @@ interface AnswerGridCell {
   height: number;
 }
 
-interface AnswerChoiceLabel {
+export interface AnswerChoiceLabel {
   letter: string;
   x: number;
   y: number;
   fontSize: number;
 }
 
-interface AnswerGridLayout {
+export interface AnswerGridLayout {
   cells: AnswerGridCell[];
   optionLabels: AnswerChoiceLabel[];
   bubbleSize: number;
@@ -167,7 +167,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function calculateAnswerGridLayout(params: {
+export function calculateAnswerGridLayout(params: {
   boundingBox: { x: number; y: number; width: number; height: number };
   rows: number;
   options: number;
@@ -341,7 +341,7 @@ const ID_WRITE_BOX_GAP = 3; // gap above/below writing boxes
 const ID_COL_GAP_AFTER_LABEL = 2; // small gap between label row and write-box row
 const ID_GROUP_GAP = 12; // visual gap between ID groups
 
-interface IdZoneGridCell {
+export interface IdZoneGridCell {
   itemType: "student_id" | "class_code" | "exam_code";
   columnIndex: number;
   /** 0..9 = bubble row; -1 = write-box row */
@@ -350,7 +350,7 @@ interface IdZoneGridCell {
   y: number;
 }
 
-interface IdZoneGridLayout {
+export interface IdZoneGridLayout {
   /** Bubble cells (rowIndex 0..9) */
   bubbleCells: IdZoneGridCell[];
   /** Writing box cells (rowIndex -1) - one per column */
@@ -378,7 +378,7 @@ interface IdZoneGridLayout {
   error?: string;
 }
 
-function calculateIdZoneGrid(
+export function calculateIdZoneGrid(
   bbox: OmrBoundingBox,
   items: OmrIdZoneItem[],
 ): IdZoneGridLayout {

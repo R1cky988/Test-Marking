@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ImagePlus, ShieldAlert, ShieldCheck, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, ImageIcon, ImagePlus, ListChecks, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LatexContent } from "@/components/latex/LatexContent";
 import { getApiErrorMessage } from "@/lib/apiErrorMessage";
+import { getTemplate } from "@/features/templates/templates.api";
+import { MarkedSheetImage } from "./MarkedSheetImage";
 import { SheetPaper } from "./SheetPaper";
 import { getResult, getResultImageUrl, scoreText, setViolation, uploadResultImage, type ResultAnswer, type ResultDetail } from "../examsSpring.api";
 
@@ -68,8 +70,13 @@ function AnswerCard({ a }: { a: ResultAnswer }) {
   );
 }
 
-/** One paper: who, version, right answers, score (+ violation), the answers and the photo of the marked sheet when there is one. */
-export function ResultDialog({ examId, resultId, preset, open, onOpenChange, teacher, format }: {
+/**
+ * One paper: who, version, right answers, score (+ violation) and the photo of the sheet.
+ * An OFFLINE / SUBMIT paper with a picture has two views the teacher switches between: "Xem ảnh" (the straightened sheet with the circles
+ * drawn on it by the browser: green right, red wrong, yellow right answer that was missed) and "Xem đáp án" (the answer list).
+ * ONLINE papers, and papers without a picture, only have the list; a picture that cannot be drawn on is shown as it is.
+ */
+export function ResultDialog({ examId, resultId, preset, open, onOpenChange, teacher, format, templateId }: {
   examId: string;
   resultId: string | null;
   /** the student's own paper is already loaded */
@@ -79,6 +86,8 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
   teacher: boolean;
   /** OFFLINE / SUBMIT: the marked sheet is shown instead of the question-by-question detail of an online exam */
   format?: "OFFLINE" | "ONLINE" | "SUBMIT";
+  /** the sheet template of the exam: with it the circles are drawn on the straightened sheet of an OFFLINE / SUBMIT paper */
+  templateId?: string | null;
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -94,6 +103,29 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
   });
   const data = preset ?? detail.data;
   const row = data?.result;
+
+  // OFFLINE / SUBMIT paper with a picture: the picture is drawn on (right / wrong / missed) and replaces the question-by-question list
+  const [drawFailed, setDrawFailed] = useState(false);
+  useEffect(() => { setDrawFailed(false); }, [resultId, open]);
+  const sheetPaper = teacher && !!format && format !== "ONLINE" && !!row?.has_image && !!templateId && !drawFailed;
+  const template = useQuery({
+    queryKey: ["template", templateId],
+    queryFn: () => getTemplate(templateId!),
+    enabled: open && sheetPaper,
+    staleTime: 5 * 60_000,
+  });
+  const grid = template.data?.grid_config;
+  const drawable = sheetPaper && !!grid?.answer_zones?.length;
+  const waitingForTemplate = sheetPaper && template.isLoading;
+  const onUnusable = useCallback(() => setDrawFailed(true), []);
+
+  // an OFFLINE / SUBMIT paper with a picture can be looked at in two ways: the straightened sheet with the marking drawn on it, or the
+  // list of answers; the teacher picks (the picture first). ONLINE papers and papers without a picture only have the list.
+  const [mode, setMode] = useState<"photo" | "answers">("photo");
+  useEffect(() => { setMode("photo"); }, [resultId, open]);
+  const hasModes = teacher && !!format && format !== "ONLINE" && !!row?.has_image;
+  const showAnswers = !hasModes || mode === "answers";
+  const showPhoto = !hasModes || mode === "photo";
 
   useEffect(() => {
     if (!open || !row?.has_image) { setImage(null); setImageState(row && open ? "none" : "idle"); return; }
@@ -154,7 +186,18 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
               </p>
             )}
 
-            {data.answers.length > 0 && (
+            {hasModes && (
+              <div role="group" aria-label={t("exam.result.viewMode", "Cách xem bài")} className="inline-flex rounded-lg border p-0.5">
+                <Button type="button" size="sm" variant={mode === "photo" ? "default" : "ghost"} aria-pressed={mode === "photo"} className="gap-2" onClick={() => setMode("photo")}>
+                  <ImageIcon className="h-4 w-4" />{t("exam.result.modePhoto", "Xem ảnh")}
+                </Button>
+                <Button type="button" size="sm" variant={mode === "answers" ? "default" : "ghost"} aria-pressed={mode === "answers"} className="gap-2" onClick={() => setMode("answers")}>
+                  <ListChecks className="h-4 w-4" />{t("exam.result.modeAnswers", "Xem đáp án")}
+                </Button>
+              </div>
+            )}
+
+            {showAnswers && data.answers.length > 0 && (
               <section aria-label={t("exam.result.answers", "Chi tiết từng câu")}>
                 <h3 className="mb-2 text-sm font-semibold">{t("exam.result.answers", "Chi tiết từng câu")}</h3>
                 {format && format !== "ONLINE" ? <SheetPaper answers={data.answers} /> : (
@@ -165,7 +208,7 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
               </section>
             )}
 
-            {(teacher || row.has_image) && <section aria-label={t("exam.result.photo", "Ảnh bài chấm")}>
+            {showPhoto && (teacher || row.has_image) && <section aria-label={t("exam.result.photo", "Ảnh bài chấm")}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold">{t("exam.result.photo", "Ảnh bài chấm")}</h3>
                 {teacher && (
@@ -176,7 +219,10 @@ export function ResultDialog({ examId, resultId, preset, open, onOpenChange, tea
                   </>
                 )}
               </div>
-              {imageState === "loading" ? <Skeleton className="h-64" /> : image ? (
+              {imageState === "loading" || waitingForTemplate ? <Skeleton className="h-64" /> : image && drawable && grid ? (
+                <MarkedSheetImage src={image} gridConfig={grid} answers={data.answers} studentCode={row.student_code} testCode={row.test_code}
+                  alt={t("exam.result.photoAlt", "Ảnh bài chấm của {{name}}", { name: row.full_name })} onUnusable={onUnusable} />
+              ) : image ? (
                 <a href={image} target="_blank" rel="noreferrer"><img src={image} alt={t("exam.result.photoAlt", "Ảnh bài chấm của {{name}}", { name: row.full_name })} className="max-h-[70vh] w-full rounded-xl border object-contain" /></a>
               ) : <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">{t("exam.result.noPhoto", "Bài này chưa có ảnh.")}</p>}
             </section>}

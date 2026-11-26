@@ -49,6 +49,8 @@ export interface Exam {
   results_released: boolean;
   /** student, SUBMIT exam: a sheet of mine is already handed in */
   my_submitted?: boolean;
+  /** SUBMIT: how many times a student may photograph his sheet again after the first hand-in */
+  max_retakes?: number | null;
   my_role: ExamRole;
   created_at: string | null;
 }
@@ -69,6 +71,8 @@ export interface ExamPayload {
   show_result_immediately?: boolean;
   allow_reference?: boolean;
   leave_policy?: LeavePolicy;
+  /** SUBMIT only: retakes allowed after the first hand-in (0-10) */
+  max_retakes?: number;
 }
 
 export interface ExamVersion {

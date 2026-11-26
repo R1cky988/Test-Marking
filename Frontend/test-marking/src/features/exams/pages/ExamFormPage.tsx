@@ -34,11 +34,12 @@ interface FormState {
   showResult: boolean;
   allowReference: boolean;
   leavePolicy: LeavePolicy;
+  maxRetakes: string;
   templateId: string;
   bankId: string;
 }
 
-const EMPTY: FormState = { name: "", subject: "", classId: "", format: "OFFLINE", from: "", to: "", duration: "", showResult: false, allowReference: false, leavePolicy: "FLAG", templateId: "", bankId: "" };
+const EMPTY: FormState = { name: "", subject: "", classId: "", format: "OFFLINE", from: "", to: "", duration: "", showResult: false, allowReference: false, leavePolicy: "FLAG", maxRetakes: "1", templateId: "", bankId: "" };
 
 const toLocalInput = (iso: string | null) => {
   if (!iso) return "";
@@ -77,7 +78,7 @@ export function ExamFormPage() {
     setLoadedExam(e);
     setForm({
       name: e.name, subject: e.subject ?? "", classId: e.class_id, format: e.format, from: toLocalInput(e.from_time), to: toLocalInput(e.to_time),
-      duration: e.duration_minutes ? String(e.duration_minutes) : "", showResult: e.show_result_immediately, allowReference: e.allow_reference ?? false, leavePolicy: e.leave_policy ?? "FLAG",
+      duration: e.duration_minutes ? String(e.duration_minutes) : "", showResult: e.show_result_immediately, allowReference: e.allow_reference ?? false, leavePolicy: e.leave_policy ?? "FLAG", maxRetakes: String(e.max_retakes ?? 1),
       templateId: e.template_id ?? "", bankId: e.question_bank_id ?? "",
     });
     setRecipe({ count: e.versions_count || undefined, easy: e.easy, medium: e.medium, hard: e.hard });
@@ -109,6 +110,7 @@ export function ExamFormPage() {
     show_result_immediately: form.format === "ONLINE" ? form.showResult : undefined,
     allow_reference: form.format === "ONLINE" ? form.allowReference : undefined,
     leave_policy: form.format === "ONLINE" && !form.allowReference ? form.leavePolicy : undefined,
+    max_retakes: form.format === "SUBMIT" ? Math.max(0, Math.min(10, Number.parseInt(form.maxRetakes, 10) || 0)) : undefined,
   });
 
   const save = useMutation({
@@ -268,6 +270,13 @@ export function ExamFormPage() {
                 ))}
                 <p className="text-xs text-muted-foreground">{t("exam.field.phoneOnly", "Thi online chỉ làm được trên ứng dụng điện thoại. Mất mạng không bị tính vi phạm, bài được chấm khi điện thoại đồng bộ lại.")}</p>
               </fieldset>
+            )}
+            {form.format === "SUBMIT" && (
+              <div className="space-y-1.5 rounded-xl border p-3">
+                <Label htmlFor="ex-retakes" className="font-medium">{t("exam.field.maxRetakes", "Số lần học sinh được chụp lại")}</Label>
+                <Input id="ex-retakes" type="number" min={0} max={10} className="w-28" value={form.maxRetakes} onChange={(e) => set("maxRetakes", e.target.value)} />
+                <p className="text-xs text-muted-foreground">{t("exam.field.maxRetakesHint", "Sau khi nộp lần đầu, học sinh được chụp lại tối đa số lần này (0 = không được chụp lại). Hết lượt thì phải đợi giáo viên công bố kết quả.")}</p>
+              </div>
             )}
             {form.format !== "ONLINE" && <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm text-muted-foreground">{resultText({ result_policy: "AFTER_TEACHER_PUBLISH" })}.</p>}
 
