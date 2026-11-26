@@ -41,6 +41,10 @@ public record ExamResponse(
         @JsonProperty("my_role") String myRole,
         @JsonProperty("created_at") OffsetDateTime createdAt,
         /** a student: he has already handed in his paper (an exam of the format SUBMIT or ONLINE) */
-        @JsonProperty("my_submitted") boolean mySubmitted
+        @JsonProperty("my_submitted") boolean mySubmitted,
+        /** SUBMIT: how many times a student may photograph his sheet again after the first hand-in */
+        @JsonProperty("max_retakes") Integer maxRetakes,
+        /** a student of a SUBMIT exam: retakes he still has (the whole number before he hands in); null for the other formats and for teachers */
+        @JsonProperty("retakes_left") Integer retakesLeft
 ) {
 }

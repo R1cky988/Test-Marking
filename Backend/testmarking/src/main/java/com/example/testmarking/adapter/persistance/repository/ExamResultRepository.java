@@ -31,4 +31,9 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long> {
     @Query("select count(r) > 0 from ExamResult r where r.examination.id = :examId and r.student.user.id = :userId "
             + "and r.isLatest = true and r.processingStatus <> 'NO_SUBMISSION'")
     boolean hasSubmitted(@Param("examId") Long examId, @Param("userId") Long userId);
+
+    /** How many times the student handed in his sheet (null count = 1, made before the counter existed); empty list = not handed in. */
+    @Query("select coalesce(r.submitCount, 1) from ExamResult r where r.examination.id = :examId and r.student.user.id = :userId "
+            + "and r.isLatest = true and r.processingStatus <> 'NO_SUBMISSION'")
+    java.util.List<Integer> submitCounts(@Param("examId") Long examId, @Param("userId") Long userId);
 }

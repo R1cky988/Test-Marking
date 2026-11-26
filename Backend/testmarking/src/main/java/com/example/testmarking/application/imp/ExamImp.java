@@ -393,6 +393,15 @@ public class ExamImp {
         e.setAllowReference(format == ExamFormat.ONLINE && Boolean.TRUE.equals(req.allowReference()));
         // what leaving the exam screen does only matters for ONLINE without open book
         e.setLeavePolicy(OnlineExamRules.normalizePolicy(req.leavePolicy()));
+        // SUBMIT only: how many times a student may photograph his sheet again (0-10, default 1); the other formats have none
+        if (format != ExamFormat.SUBMIT) e.setMaxRetakes(0);
+        else if (req.maxRetakes() != null) e.setMaxRetakes(Math.max(0, Math.min(10, req.maxRetakes())));
+        else if (e.getMaxRetakes() == null) e.setMaxRetakes(1);
+    }
+
+    /** Retakes a SUBMIT exam allows after the first hand-in (a missing value means 1). */
+    public static int retakesOf(Examination e) {
+        return e.getMaxRetakes() == null ? 1 : e.getMaxRetakes();
     }
 
     /** Fewer questions than the sheet has is fine (the spare rows stay blank); more is impossible. */
@@ -471,7 +480,8 @@ public class ExamImp {
                 immediate, e.getFormat() == ExamFormat.ONLINE && Boolean.TRUE.equals(e.getAllowReference()),
                 OnlineExamRules.normalizePolicy(e.getLeavePolicy()),
                 immediate ? "IMMEDIATE" : "AFTER_TEACHER_PUBLISH", Boolean.TRUE.equals(e.getIsScorePublished()),
-                released(e), "TEACHER", e.getCreatedAt(), false);
+                released(e), "TEACHER", e.getCreatedAt(), false,
+                e.getFormat() == ExamFormat.SUBMIT ? retakesOf(e) : null, null);
     }
 
     /** What a student may know about the exam: no template, bank or version facts. */
@@ -480,7 +490,15 @@ public class ExamImp {
         return new ExamResponse(r.id(), r.name(), r.subject(), r.classId(), r.className(), r.format(), r.status(), r.fromTime(), r.toTime(),
                 r.durationMinutes(), r.maxScore(), null, null, null, null, null, 0, 0, 0, 0, 0,
                 r.showResultImmediately(), r.allowReference(), r.leavePolicy(), r.resultPolicy(), r.isScorePublished(), r.resultsReleased(), "STUDENT", r.createdAt(),
-                results.hasSubmitted(e.getId(), me.getId()));
+                results.hasSubmitted(e.getId(), me.getId()), r.maxRetakes(), retakesLeft(me, e));
+    }
+
+    /** A student of a SUBMIT exam: retakes left (all of them while he has not handed in anything yet). */
+    private Integer retakesLeft(User me, Examination e) {
+        if (e.getFormat() != ExamFormat.SUBMIT) return null;
+        List<Integer> counts = results.submitCounts(e.getId(), me.getId());
+        int used = counts.isEmpty() ? 0 : Math.max(0, counts.get(0) - 1);
+        return Math.max(0, retakesOf(e) - used);
     }
 
     private static ExamFormat parseFormat(String s) {

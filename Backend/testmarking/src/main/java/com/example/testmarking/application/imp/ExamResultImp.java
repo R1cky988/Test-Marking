@@ -239,10 +239,25 @@ public class ExamResultImp {
         if (req == null) throw TemplateException.badRequest("Thiếu dữ liệu", "body: is required");
         Student student = students.findByUser_Id(me.getId()).orElseThrow(() -> TemplateException.forbidden("Bạn không phải học sinh của lớp này"));
         String onSheet = req.studentCode() == null ? "" : req.studentCode().trim();
-        if (!onSheet.isEmpty() && !onSheet.contains("?") && !onSheet.equalsIgnoreCase(student.getStudentCode())) {
+        // the code on the sheet must be readable and must be the code of the account that hands the sheet in
+        if (onSheet.isEmpty() || onSheet.contains("?")) {
+            throw TemplateException.badRequestWithCode("STUDENT_CODE_UNREADABLE", "Chưa đọc được mã số học sinh trên phiếu, hãy chụp lại");
+        }
+        if (!onSheet.equalsIgnoreCase(student.getStudentCode())) {
             throw TemplateException.badRequestWithCode("STUDENT_CODE_MISMATCH", "Mã số học sinh trên phiếu không phải của bạn");
         }
+        ExamResult before = results.findLatestOf(e.getId(), student.getId()).filter(x -> !NO_SUBMISSION.equals(x.getProcessingStatus())).orElse(null);
+        int used = before == null ? 0 : (before.getSubmitCount() == null ? 1 : before.getSubmitCount());
+        if (used >= 1 + ExamImp.retakesOf(e)) {
+            throw TemplateException.badRequestWithCode("RETAKES_EXHAUSTED", "Bạn đã hết lượt chụp lại bài làm, hãy đợi giáo viên công bố kết quả");
+        }
         ExamResult r = score(e, student, req, SRC_STUDENT, me);
+        // the newest submission replaces the previous one (score and answers are overwritten), so the old photos go too
+        r.setImageMarkedRustKey(null);
+        r.setImageDewarpedRustKey(null);
+        r.setImageRawRustKey(null);
+        r.setSubmitCount(used + 1);
+        results.save(r);
         return myResultOf(e, r);
     }
 
@@ -282,9 +297,11 @@ public class ExamResultImp {
 
         Map<Integer, String> chosen = new HashMap<>();
         for (ResultAnswerRequest a : req.answers() == null ? List.<ResultAnswerRequest>of() : req.answers()) {
-            if (a == null || a.order() == null || !byOrder.containsKey(a.order())) {
-                throw TemplateException.badRequestWithCode("INVALID_RESULT", "Số câu không có trong mã đề " + code.getCodeNumber());
+            if (a == null || a.order() == null || a.order() < 1) {
+                throw TemplateException.badRequestWithCode("INVALID_RESULT", "Số câu không hợp lệ");
             }
+            // the sheet may have more rows than the exam has questions: only questions 1..N of the version count
+            if (!byOrder.containsKey(a.order())) continue;
             if (chosen.put(a.order(), normalizeChoice(a.choice())) != null) {
                 throw TemplateException.badRequestWithCode("INVALID_RESULT", "Câu " + a.order() + " bị gửi hai lần");
             }

@@ -98,6 +98,10 @@ public class Examination {
     @Column(name = "leave_policy", nullable = false, length = 10, columnDefinition = "varchar(10) default 'FLAG'")
     private String leavePolicy = "FLAG";
 
+    /** SUBMIT only: how many times a student may photograph his sheet again after the first hand-in. 0 for the other formats. */
+    @Column(name = "max_retakes", nullable = false, columnDefinition = "integer default 1")
+    private Integer maxRetakes = 1;
+
     // Cờ kiểm soát công bố điểm (Examxy policy)
     @Column(name = "is_score_published", nullable = false)
     private Boolean isScorePublished = false;
@@ -134,6 +138,9 @@ public class Examination {
         }
         if (this.leavePolicy == null) {
             this.leavePolicy = "FLAG";
+        }
+        if (this.maxRetakes == null) {
+            this.maxRetakes = 1;
         }
     }
 

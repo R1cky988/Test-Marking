@@ -53,6 +53,10 @@ public class ExamResult {
     @Column(name = "is_latest", nullable = false)
     private Boolean isLatest = true;
 
+    /** SUBMIT exams: how many times the student handed in his sheet (the first one counts; null = 1 for papers made before this existed). */
+    @Column(name = "submit_count")
+    private Integer submitCount;
+
     @Column(name = "total_score", precision = 5, scale = 2)
     private BigDecimal totalScore;
 

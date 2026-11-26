@@ -29,18 +29,19 @@ public record ExamRequest(
         @JsonProperty("question_bank_id") UUID questionBankId,
         @JsonProperty("show_result_immediately") Boolean showResultImmediately,
         @JsonProperty("allow_reference") Boolean allowReference,
-        @JsonProperty("leave_policy") String leavePolicy
+        @JsonProperty("leave_policy") String leavePolicy,
+        @JsonProperty("max_retakes") Integer maxRetakes
 ) {
     /** Without the leave policy (it stays FLAG). */
     public ExamRequest(String name, String subject, UUID classId, String format, OffsetDateTime fromTime, OffsetDateTime toTime,
                        Integer durationMinutes, BigDecimal maxScore, UUID templateId, UUID questionBankId, Boolean showResultImmediately,
                        Boolean allowReference) {
-        this(name, subject, classId, format, fromTime, toTime, durationMinutes, maxScore, templateId, questionBankId, showResultImmediately, allowReference, null);
+        this(name, subject, classId, format, fromTime, toTime, durationMinutes, maxScore, templateId, questionBankId, showResultImmediately, allowReference, null, null);
     }
 
     /** Without the open-book switch (it stays off). */
     public ExamRequest(String name, String subject, UUID classId, String format, OffsetDateTime fromTime, OffsetDateTime toTime,
                        Integer durationMinutes, BigDecimal maxScore, UUID templateId, UUID questionBankId, Boolean showResultImmediately) {
-        this(name, subject, classId, format, fromTime, toTime, durationMinutes, maxScore, templateId, questionBankId, showResultImmediately, null, null);
+        this(name, subject, classId, format, fromTime, toTime, durationMinutes, maxScore, templateId, questionBankId, showResultImmediately, null, null, null);
     }
 }
